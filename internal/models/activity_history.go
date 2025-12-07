@@ -1,0 +1,41 @@
+package models
+
+import "time"
+
+type ActivityType string
+
+const (
+	ActivityTypeExpenseCreated   ActivityType = "expense_created"
+	ActivityTypeExpenseUpdated   ActivityType = "expense_updated"
+	ActivityTypeExpenseDeleted   ActivityType = "expense_deleted"
+	ActivityTypeCategoryCreated  ActivityType = "category_created"
+	ActivityTypeCategoryUpdated  ActivityType = "category_updated"
+	ActivityTypeCategoryDeleted  ActivityType = "category_deleted"
+	ActivityTypeBudgetCreated    ActivityType = "budget_created"
+	ActivityTypeBudgetUpdated    ActivityType = "budget_updated"
+	ActivityTypeRecurringCreated ActivityType = "recurring_created"
+	ActivityTypeRecurringUpdated ActivityType = "recurring_updated"
+	ActivityTypeRecurringDeleted ActivityType = "recurring_deleted"
+)
+
+type ActivityHistory struct {
+	ID           int          `gorm:"primaryKey" json:"id"`
+	UserID       int          `gorm:"not null;index" json:"user_id"`       // Идентификатор пользователя
+	ActivityType ActivityType `gorm:"not null;index" json:"activity_type"` // Тип действия создание обновление удаление
+	EntityType   string       `gorm:"not null" json:"entity_type"`         // Тип сущности расход категория бюджет регулярный расход
+	EntityID     int          `gorm:"not null" json:"entity_id"`           // Идентификатор сущности над которой выполнено действие
+	Description  string       `json:"description"`                         // Текстовое описание выполненного действия
+	Metadata     string       `gorm:"type:jsonb" json:"metadata"`          // Дополнительные данные действия в формате JSON
+	CreatedAt    time.Time    `json:"created_at"`                          // Дата и время выполнения действия
+
+	// Связи
+	User User `gorm:"foreignKey:UserID" json:"-"` // Пользователь выполнивший действие
+}
+
+type ActivityFilter struct {
+	UserID       int           // Идентификатор пользователя для фильтрации
+	ActivityType *ActivityType // Тип действия для фильтрации
+	EntityType   *string       // Тип сущности для фильтрации
+	StartDate    *time.Time    // Начальная дата периода для фильтрации
+	EndDate      *time.Time    // Конечная дата периода для фильтрации
+}
