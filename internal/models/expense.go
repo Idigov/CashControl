@@ -1,17 +1,19 @@
 package models
 
-import "time"
+import (
+	"time"
+
+	"gorm.io/gorm"
+)
 
 type Expense struct {
-	ID          int       `gorm:"primaryKey" json:"id"`
+	gorm.Model
+
 	UserID      int       `gorm:"not null;index" json:"user_id"`             // Идентификатор пользователя
 	CategoryID  int       `gorm:"not null;index" json:"category_id"`         // Идентификатор категории расхода
 	Amount      float64   `gorm:"not null;type:decimal(10,2)" json:"amount"` // Сумма расхода
 	Description string    `json:"description"`                               // Описание расхода
 	Date        time.Time `gorm:"not null;index" json:"date"`                // Дата расхода
-	CreatedAt   time.Time `json:"created_at"`                                // Дата и время создания записи
-	UpdatedAt   time.Time `json:"updated_at"`                                // Дата и время последнего обновления записи
-
 	// Связи
 	User     User     `gorm:"foreignKey:UserID" json:"-"`            // Пользователь владелец расхода
 	Category Category `gorm:"foreignKey:CategoryID" json:"category"` // Категория расхода
