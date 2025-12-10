@@ -8,7 +8,7 @@ import (
 	"gorm.io/gorm"
 )
 
-var expenseErrorNil error = errors.New("expense is nil")
+var errExpenseNil error = errors.New("expense is nil")
 
 type ExpenseRepository interface {
 	List() ([]models.Expense, error)
@@ -61,7 +61,7 @@ func (r *gormExpenseRepository) GetByID(id uint) (*models.Expense, error) {
 
 func (r *gormExpenseRepository) Create(expense *models.Expense) error {
 	if expense == nil {
-		return expenseErrorNil
+		return errExpenseNil
 	}
 
 	r.logger.Debug("repo.expense.create",
@@ -86,7 +86,7 @@ func (r *gormExpenseRepository) Create(expense *models.Expense) error {
 
 func (r *gormExpenseRepository) Update(expense *models.Expense) error {
 	if expense == nil {
-		return expenseErrorNil
+		return errExpenseNil
 	}
 	r.logger.Debug("repo.expense.update",
 		slog.String("op", "repo.expense.update"),

@@ -8,7 +8,7 @@ import (
 	"gorm.io/gorm"
 )
 
-var budgetErrorNil error = errors.New("budget is nil")
+var errBudgetNil error = errors.New("budget is nil")
 
 type BudgetRepository interface {
 	List() ([]models.Budget, error)
@@ -101,7 +101,7 @@ func (r *gormBudgetRepository) GetByUserID(userID int) ([]models.Budget, error) 
 
 func (r *gormBudgetRepository) Create(budget *models.Budget) error {
 	if budget == nil {
-		return budgetErrorNil
+		return errBudgetNil
 	}
 
 	r.logger.Debug("repo.budget.create",
@@ -128,7 +128,7 @@ func (r *gormBudgetRepository) Create(budget *models.Budget) error {
 
 func (r *gormBudgetRepository) Update(budget *models.Budget) error {
 	if budget == nil {
-		return budgetErrorNil
+		return errBudgetNil
 	}
 	r.logger.Debug("repo.budget.update",
 		slog.String("op", "repo.budget.update"),
