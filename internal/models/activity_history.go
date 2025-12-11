@@ -41,4 +41,6 @@ type ActivityFilter struct {
 	EntityType   *string       // Тип сущности для фильтрации
 	StartDate    *time.Time    // Начальная дата периода для фильтрации
 	EndDate      *time.Time    // Конечная дата периода для фильтрации
+	Limit        *int          // количество записей
+	Offset       *int          // смещение
 }
