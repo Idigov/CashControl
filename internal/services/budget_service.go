@@ -353,21 +353,21 @@ func (s *budgetService) calculateSpentAmount(userID int, month, year int) (float
 	startDate := time.Date(year, time.Month(month), 1, 0, 0, 0, 0, time.UTC)
 	endDate := startDate.AddDate(0, 1, 0).Add(-time.Nanosecond)
 
-	// Получаем все расходы пользователя
-	expenses, err := s.expenses.List()
+	// Получаем расходы пользователя за указанный период
+	filter := models.ExpenseFilter{
+		UserID:    userID,
+		StartDate: &startDate,
+		EndDate:   &endDate,
+	}
+	expenses, err := s.expenses.List(filter)
 	if err != nil {
 		return 0, err
 	}
 
-	// Фильтруем расходы по пользователю и дате, суммируем
+	// Суммируем расходы
 	var total float64
 	for _, expense := range expenses {
-		if expense.UserID == userID {
-			expenseDate := expense.Date
-			if expenseDate.After(startDate) && expenseDate.Before(endDate) || expenseDate.Equal(startDate) || expenseDate.Equal(endDate) {
-				total += expense.Amount
-			}
-		}
+		total += expense.Amount
 	}
 
 	return total, nil
