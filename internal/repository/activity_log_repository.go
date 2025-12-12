@@ -11,7 +11,7 @@ import (
 var errActivityLogNil = errors.New("activity log is nil")
 
 type ActivityLogRepository interface {
-	Get(filter *models.ActivityFilter) ([]models.ActivityHistory, error)
+	Get(filter models.ActivityFilter) ([]models.ActivityHistory, error)
 	Create(logEntry *models.ActivityHistory) error
 }
 
@@ -68,7 +68,7 @@ func (r *activityLogRepository) Create(logEntry *models.ActivityHistory) error {
 }
 
 // Get возвращает список записей по фильтру
-func (r *activityLogRepository) Get(filter *models.ActivityFilter) ([]models.ActivityHistory, error) {
+func (r *activityLogRepository) Get(filter models.ActivityFilter) ([]models.ActivityHistory, error) {
 	const op = "repo.activity_log.get"
 
 	r.logger.Debug("retrieving activity logs",

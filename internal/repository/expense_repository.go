@@ -11,7 +11,7 @@ import (
 var errExpenseNil error = errors.New("expense is nil")
 
 type ExpenseRepository interface {
-	List() ([]models.Expense, error)
+	List(filter models.ExpenseFilter) ([]models.Expense, error)
 	GetByID(id uint) (*models.Expense, error)
 	Create(expense *models.Expense) error
 	Update(expense *models.Expense) error
@@ -27,11 +27,37 @@ func NewExpenseRepository(db *gorm.DB, logger *slog.Logger) ExpenseRepository {
 	return &gormExpenseRepository{db: db, logger: logger}
 }
 
-func (r *gormExpenseRepository) List() ([]models.Expense, error) {
+func (r *gormExpenseRepository) List(filter models.ExpenseFilter) ([]models.Expense, error) {
+
 	r.logger.Debug("repo.expense.list",
 		slog.String("op", "repo.expense.list"),
 	)
+
 	var expenses []models.Expense
+	query := r.db.Model(&models.Expense{}).Preload("Category").Where("user_id = ?", filter.UserID)
+
+	if filter.CategoryID != nil {
+		query = query.Where("category_id = ?", *filter.CategoryID)
+	}
+	if filter.StartDate != nil {
+		query = query.Where("date >= ?", *filter.StartDate)
+	}
+	if filter.EndDate != nil {
+		query = query.Where("date <= ?", *filter.EndDate)
+	}
+	if filter.MinAmount != nil {
+		query = query.Where("amount >= ?", *filter.MinAmount)
+	}
+	if filter.MaxAmount != nil {
+		query = query.Where("amount <= ?", *filter.MaxAmount)
+	}
+	if filter.Limit != nil {
+		query = query.Limit(*filter.Limit)
+	}
+	if filter.Offset != nil {
+		query = query.Offset(*filter.Offset)
+	}
+
 	if err := r.db.Find(&expenses).Error; err != nil {
 		r.logger.Error("repo.expense.list failed",
 			slog.String("op", "repo.expense.list"),

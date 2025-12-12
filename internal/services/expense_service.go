@@ -13,7 +13,7 @@ var ErrExpenseNotFound = errors.New("расход не найден")
 
 type ExpenseService interface {
 	CreateExpense(req models.CreateExpenseRequest) (*models.Expense, error)
-	GetExpenseList() ([]models.Expense, error)
+	GetExpenseList(filter models.ExpenseFilter) ([]models.Expense, error)
 	GetExpenseByID(id uint) (*models.Expense, error)
 	UpdateExpense(id uint, req models.UpdateExpenseRequest) (*models.Expense, error)
 	DeleteExpense(id uint) error
@@ -63,8 +63,8 @@ func (s *expenseService) CreateExpense(req models.CreateExpenseRequest) (*models
 	return expense, nil
 }
 
-func (s *expenseService) GetExpenseList() ([]models.Expense, error) {
-	expenses, err := s.expenses.List()
+func (s *expenseService) GetExpenseList(filter models.ExpenseFilter) ([]models.Expense, error) {
+	expenses, err := s.expenses.List(filter)
 
 	if err != nil {
 		s.logger.Error("failed to list expenses",
@@ -218,3 +218,5 @@ func (s *expenseService) applyExpenseUpdate(expense *models.Expense, req models.
 
 	return nil
 }
+
+

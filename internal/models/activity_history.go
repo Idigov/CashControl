@@ -35,6 +35,15 @@ type ActivityHistory struct {
 	User User `gorm:"foreignKey:UserID" json:"-"` // Пользователь выполнивший действие
 }
 
+type CreateActivityLogRequest struct {
+	UserID       int                    `json:"user_id"`       // Кто совершил действие
+	ActivityType ActivityType           `json:"activity_type"` // Тип действия
+	EntityType   string                 `json:"entity_type"`   // На какой сущности
+	EntityID     int                    `json:"entity_id"`     // ID сущности
+	Description  string                 `json:"description"`   // Текстовое описание
+	Metadata     map[string]interface{} `json:"metadata"`      // Дополнительные данные (будут сериализованы в JSONB)
+}
+
 type ActivityFilter struct {
 	UserID       int           // Идентификатор пользователя для фильтрации
 	ActivityType *ActivityType // Тип действия для фильтрации

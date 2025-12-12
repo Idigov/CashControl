@@ -40,6 +40,8 @@ type ExpenseFilter struct {
 	EndDate    *time.Time // Конечная дата периода для фильтрации
 	MinAmount  *float64   // Минимальная сумма для фильтрации
 	MaxAmount  *float64   // Максимальная сумма для фильтрации
+	Limit      *int       // количество записей
+	Offset     *int       // смещение
 }
 
 type ExpenseGroup struct {

@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -36,7 +37,9 @@ func (h *ExpenseHandler) List(c *gin.Context) {
 		slog.String("path", c.FullPath()),
 	)
 
-	expenses, err := h.service.GetExpenseList()
+	filter, err := h.parseExpenseFilter(c)
+
+	expenses, err := h.service.GetExpenseList(filter)
 	if err != nil {
 		h.logger.Error("failed to get expense list",
 			slog.String("error", err.Error()),
@@ -192,4 +195,36 @@ func (h *ExpenseHandler) Delete(c *gin.Context) {
 	)
 
 	c.Status(http.StatusOK)
+}
+
+func (h *ExpenseHandler) parseExpenseFilter(c *gin.Context) (models.ExpenseFilter, error) {
+	var filter models.ExpenseFilter
+
+	if v := c.Query("category_id"); v != "" {
+		if id, err := strconv.Atoi(v); err == nil {
+			filter.CategoryID = &id
+		}
+	}
+	if v := c.Query("start_date"); v != "" {
+		if t, err := time.Parse("2006-01-02", v); err == nil {
+			filter.StartDate = &t
+		}
+	}
+	if v := c.Query("end_date"); v != "" {
+		if t, err := time.Parse("2006-01-02", v); err == nil {
+			filter.EndDate = &t
+		}
+	}
+	if v := c.Query("limit"); v != "" {
+		if l, err := strconv.Atoi(v); err == nil {
+			filter.Limit = &l
+		}
+	}
+	if v := c.Query("offset"); v != "" {
+		if o, err := strconv.Atoi(v); err == nil {
+			filter.Offset = &o
+		}
+	}
+
+	return filter, nil
 }
