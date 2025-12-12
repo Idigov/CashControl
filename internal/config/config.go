@@ -18,6 +18,7 @@ type Config struct {
 	DBName     string
 	DBPort     string
 	DBSSLMode  string
+	JWTSecret  string
 }
 
 func Load() (*Config, error) {
@@ -35,6 +36,7 @@ func Load() (*Config, error) {
 		DBName:     getEnv("DB_NAME", "cashcontrol"),
 		DBPort:     getEnv("DB_PORT", "5432"),
 		DBSSLMode:  getEnv("DB_SSLMODE", "disable"),
+		JWTSecret:  getEnv("JWT_SECRET", "secret"),
 	}
 
 	if err := cfg.validate(); err != nil {
