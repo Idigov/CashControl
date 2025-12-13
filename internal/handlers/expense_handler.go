@@ -37,7 +37,7 @@ func (h *ExpenseHandler) List(c *gin.Context) {
 		slog.String("path", c.FullPath()),
 	)
 
-	filter, err := h.parseExpenseFilter(c)
+	filter, _ := h.parseExpenseFilter(c) // Игнорируем ошибку парсинга фильтра, так как все поля опциональны
 
 	expenses, err := h.service.GetExpenseList(filter)
 	if err != nil {
@@ -61,6 +61,24 @@ func (h *ExpenseHandler) Create(c *gin.Context) {
 		slog.String("path", c.FullPath()),
 	)
 
+	userIDStr := c.Query("user_id")
+	if userIDStr == "" {
+		h.logger.Warn("missing user_id parameter")
+		c.JSON(http.StatusBadRequest, gin.H{"error": "необходим параметр user_id"})
+		return
+	}
+
+	userIDUint, err := strconv.ParseUint(userIDStr, 10, 64)
+	if err != nil {
+		h.logger.Warn("invalid user_id parameter",
+			slog.String("raw_user_id", userIDStr),
+			slog.String("reason", err.Error()),
+		)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "некорректный user_id"})
+		return
+	}
+	userID := uint(userIDUint)
+
 	var req models.CreateExpenseRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		h.logger.Warn("invalid request body",
@@ -70,9 +88,10 @@ func (h *ExpenseHandler) Create(c *gin.Context) {
 		return
 	}
 
-	expense, err := h.service.CreateExpense(req)
+	expense, err := h.service.CreateExpense(userID, req)
 	if err != nil {
 		h.logger.Warn("failed to create expense",
+			slog.Uint64("user_id", uint64(userID)),
 			slog.String("error", err.Error()),
 		)
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -81,7 +100,7 @@ func (h *ExpenseHandler) Create(c *gin.Context) {
 
 	h.logger.Info("expense created",
 		slog.Uint64("expense_id", uint64(expense.ID)),
-		slog.Uint64("user_id", uint64(expense.UserID)),
+		slog.Uint64("user_id", uint64(userID)),
 	)
 
 	c.JSON(http.StatusCreated, expense)
@@ -106,6 +125,13 @@ func (h *ExpenseHandler) Get(c *gin.Context) {
 
 	expense, err := h.service.GetExpenseByID(uint(id))
 	if err != nil {
+		if err == services.ErrExpenseNotFound {
+			h.logger.Warn("expense not found",
+				slog.Uint64("expense_id", id),
+			)
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
 		h.logger.Error("failed to get expense",
 			slog.Uint64("expense_id", id),
 			slog.String("error", err.Error()),
@@ -200,9 +226,17 @@ func (h *ExpenseHandler) Delete(c *gin.Context) {
 func (h *ExpenseHandler) parseExpenseFilter(c *gin.Context) (models.ExpenseFilter, error) {
 	var filter models.ExpenseFilter
 
+	// user_id обязателен
+	if v := c.Query("user_id"); v != "" {
+		if id, err := strconv.ParseUint(v, 10, 64); err == nil {
+			filter.UserID = uint(id)
+		}
+	}
+
 	if v := c.Query("category_id"); v != "" {
-		if id, err := strconv.Atoi(v); err == nil {
-			filter.CategoryID = &id
+		if id, err := strconv.ParseUint(v, 10, 64); err == nil {
+			categoryID := uint(id)
+			filter.CategoryID = &categoryID
 		}
 	}
 	if v := c.Query("start_date"); v != "" {

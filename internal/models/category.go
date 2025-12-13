@@ -6,7 +6,7 @@ import (
 
 type Category struct {
 	gorm.Model
-	UserID    int    `gorm:"not null;index" json:"user_id"`   // Идентификатор пользователя владельца категории
+	UserID    uint   `gorm:"not null;index" json:"user_id"`   // Идентификатор пользователя владельца категории
 	Name      string `gorm:"not null" json:"name"`            // Название категории
 	Color     string `gorm:"default:'#3B82F6'" json:"color"`  // Цвет категории
 	Icon      string `json:"icon"`                            // Иконка категории

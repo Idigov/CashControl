@@ -36,7 +36,7 @@ func (h *CategoryHandler) ListByUser(c *gin.Context) {
 		slog.String("path", c.FullPath()),
 	)
 
-	userID, err := strconv.ParseInt(c.Param("userId"), 10, 64)
+	userIDUint, err := strconv.ParseUint(c.Param("userId"), 10, 64)
 	if err != nil {
 		h.logger.Warn("invalid user id",
 			slog.String("raw_id", c.Param("userId")),
@@ -45,11 +45,12 @@ func (h *CategoryHandler) ListByUser(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "некорректный идентификатор пользователя"})
 		return
 	}
+	userID := uint(userIDUint)
 
-	categories, err := h.service.GetCategoryList(int(userID))
+	categories, err := h.service.GetCategoryList(userID)
 	if err != nil {
 		h.logger.Error("failed to get category list",
-			slog.Int("user_id", int(userID)),
+			slog.Uint64("user_id", uint64(userID)),
 			slog.String("error", err.Error()),
 		)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -57,7 +58,7 @@ func (h *CategoryHandler) ListByUser(c *gin.Context) {
 	}
 
 	h.logger.Info("category list retrieved",
-		slog.Int("user_id", int(userID)),
+		slog.Uint64("user_id", uint64(userID)),
 		slog.Int("count", len(categories)),
 	)
 
@@ -70,7 +71,7 @@ func (h *CategoryHandler) Create(c *gin.Context) {
 		slog.String("path", c.FullPath()),
 	)
 
-	userID, err := strconv.ParseInt(c.Param("userId"), 10, 64)
+	userIDUint, err := strconv.ParseUint(c.Param("userId"), 10, 64)
 	if err != nil {
 		h.logger.Warn("invalid user id",
 			slog.String("raw_id", c.Param("userId")),
@@ -79,6 +80,7 @@ func (h *CategoryHandler) Create(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "некорректный идентификатор пользователя"})
 		return
 	}
+	userID := uint(userIDUint)
 
 	var req models.CreateCategoryRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -89,10 +91,10 @@ func (h *CategoryHandler) Create(c *gin.Context) {
 		return
 	}
 
-	category, err := h.service.CreateCategory(int(userID), req)
+	category, err := h.service.CreateCategory(userID, req)
 	if err != nil {
 		h.logger.Warn("failed to create category",
-			slog.Int("user_id", int(userID)),
+			slog.Uint64("user_id", uint64(userID)),
 			slog.String("error", err.Error()),
 		)
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -101,7 +103,7 @@ func (h *CategoryHandler) Create(c *gin.Context) {
 
 	h.logger.Info("category created",
 		slog.Uint64("category_id", uint64(category.ID)),
-		slog.Int("user_id", int(userID)),
+		slog.Uint64("user_id", uint64(userID)),
 	)
 
 	c.JSON(http.StatusCreated, category)

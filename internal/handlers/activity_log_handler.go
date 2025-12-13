@@ -48,7 +48,7 @@ func (h *ActivityLogHandler) Get(c *gin.Context) {
 	}
 
 	h.logger.Debug("parsed filter",
-		slog.Int("user_id", filter.UserID),
+		slog.Uint64("user_id", uint64(filter.UserID)),
 		slog.Any("activity_type", filter.ActivityType),
 		slog.Any("entity_type", filter.EntityType),
 		slog.Any("start_date", filter.StartDate),
@@ -61,7 +61,7 @@ func (h *ActivityLogHandler) Get(c *gin.Context) {
 	if err != nil {
 		h.logger.Error("service.GetActivityLogs failed",
 			slog.String("error", err.Error()),
-			slog.Int("user_id", filter.UserID),
+			slog.Uint64("user_id", uint64(filter.UserID)),
 		)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -69,7 +69,7 @@ func (h *ActivityLogHandler) Get(c *gin.Context) {
 
 	h.logger.Info("activity logs returned",
 		slog.Int("count", len(logs)),
-		slog.Int("user_id", filter.UserID),
+		slog.Uint64("user_id", uint64(filter.UserID)),
 	)
 
 	c.JSON(http.StatusOK, logs)
@@ -91,17 +91,17 @@ func (h *ActivityLogHandler) Create(c *gin.Context) {
 	}
 
 	h.logger.Debug("request body parsed",
-		slog.Int("user_id", req.UserID),
+		slog.Uint64("user_id", uint64(req.UserID)),
 		slog.String("activity_type", string(req.ActivityType)),
 		slog.String("entity_type", req.EntityType),
-		slog.Int("entity_id", req.EntityID),
+		slog.Uint64("entity_id", uint64(req.EntityID)),
 	)
 
 	logEntry, err := h.service.CreateActivityLog(req)
 	if err != nil {
 		h.logger.Error("failed to create activity log",
 			slog.String("error", err.Error()),
-			slog.Int("user_id", req.UserID),
+			slog.Uint64("user_id", uint64(req.UserID)),
 			slog.String("activity_type", string(req.ActivityType)),
 		)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create log entry"})
@@ -110,7 +110,7 @@ func (h *ActivityLogHandler) Create(c *gin.Context) {
 
 	h.logger.Info("activity log created",
 		slog.Int("log_id", int(logEntry.ID)),
-		slog.Int("user_id", logEntry.UserID),
+		slog.Uint64("user_id", uint64(logEntry.UserID)),
 		slog.String("activity_type", string(logEntry.ActivityType)),
 	)
 
@@ -125,12 +125,12 @@ func (h *ActivityLogHandler) parseActivityFilter(c *gin.Context) (models.Activit
 		return filter, errors.New("user_id is required")
 	}
 
-	userID, err := strconv.Atoi(userIDStr)
-	if err != nil || userID <= 0 {
+	userIDUint, err := strconv.ParseUint(userIDStr, 10, 64)
+	if err != nil || userIDUint == 0 {
 		return filter, errors.New("invalid user_id")
 	}
-	
-	filter.UserID = userID
+
+	filter.UserID = uint(userIDUint)
 
 	if v := c.Query("activity_type"); v != "" {
 		at := models.ActivityType(v)

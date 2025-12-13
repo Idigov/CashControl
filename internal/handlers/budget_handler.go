@@ -45,7 +45,7 @@ func (h *BudgetHandler) List(c *gin.Context) {
 		return
 	}
 
-	userID, err := strconv.Atoi(userIDStr)
+	userIDUint, err := strconv.ParseUint(userIDStr, 10, 64)
 	if err != nil {
 		h.logger.Warn("invalid user_id parameter",
 			slog.String("raw_user_id", userIDStr),
@@ -54,11 +54,12 @@ func (h *BudgetHandler) List(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "некорректный user_id"})
 		return
 	}
+	userID := uint(userIDUint)
 
 	budgets, err := h.service.GetBudgetList(userID)
 	if err != nil {
 		h.logger.Error("failed to get budget list",
-			slog.Int("user_id", userID),
+			slog.Uint64("user_id", uint64(userID)),
 			slog.String("error", err.Error()),
 		)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -66,7 +67,7 @@ func (h *BudgetHandler) List(c *gin.Context) {
 	}
 
 	h.logger.Info("budget list retrieved",
-		slog.Int("user_id", userID),
+		slog.Uint64("user_id", uint64(userID)),
 		slog.Int("count", len(budgets)),
 	)
 
@@ -86,7 +87,7 @@ func (h *BudgetHandler) Create(c *gin.Context) {
 		return
 	}
 
-	userID, err := strconv.Atoi(userIDStr)
+	userIDUint, err := strconv.ParseUint(userIDStr, 10, 64)
 	if err != nil {
 		h.logger.Warn("invalid user_id parameter",
 			slog.String("raw_user_id", userIDStr),
@@ -95,6 +96,7 @@ func (h *BudgetHandler) Create(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "некорректный user_id"})
 		return
 	}
+	userID := uint(userIDUint)
 
 	var req models.CreateBudgetRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -108,7 +110,7 @@ func (h *BudgetHandler) Create(c *gin.Context) {
 	budget, err := h.service.CreateBudget(userID, req)
 	if err != nil {
 		h.logger.Warn("failed to create budget",
-			slog.Int("user_id", userID),
+			slog.Uint64("user_id", uint64(userID)),
 			slog.String("error", err.Error()),
 		)
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -117,7 +119,7 @@ func (h *BudgetHandler) Create(c *gin.Context) {
 
 	h.logger.Info("budget created",
 		slog.Uint64("budget_id", uint64(budget.ID)),
-		slog.Int("user_id", userID),
+		slog.Uint64("user_id", uint64(userID)),
 		slog.Float64("amount", budget.Amount),
 		slog.Int("month", budget.Month),
 		slog.Int("year", budget.Year),
@@ -270,7 +272,7 @@ func (h *BudgetHandler) GetStatus(c *gin.Context) {
 		return
 	}
 
-	userID, err := strconv.Atoi(userIDStr)
+	userIDUint, err := strconv.ParseUint(userIDStr, 10, 64)
 	if err != nil {
 		h.logger.Warn("invalid user_id parameter",
 			slog.String("raw_user_id", userIDStr),
@@ -279,6 +281,7 @@ func (h *BudgetHandler) GetStatus(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "некорректный user_id"})
 		return
 	}
+	userID := uint(userIDUint)
 
 	monthStr := c.Query("month")
 	if monthStr == "" {
@@ -318,7 +321,7 @@ func (h *BudgetHandler) GetStatus(c *gin.Context) {
 	if err != nil {
 		if err == services.ErrBudgetNotFound {
 			h.logger.Warn("budget not found for status",
-				slog.Int("user_id", userID),
+				slog.Uint64("user_id", uint64(userID)),
 				slog.Int("month", month),
 				slog.Int("year", year),
 			)
@@ -326,7 +329,7 @@ func (h *BudgetHandler) GetStatus(c *gin.Context) {
 			return
 		}
 		h.logger.Error("failed to get budget status",
-			slog.Int("user_id", userID),
+			slog.Uint64("user_id", uint64(userID)),
 			slog.Int("month", month),
 			slog.Int("year", year),
 			slog.String("error", err.Error()),
@@ -336,7 +339,7 @@ func (h *BudgetHandler) GetStatus(c *gin.Context) {
 	}
 
 	h.logger.Info("budget status retrieved",
-		slog.Int("user_id", userID),
+		slog.Uint64("user_id", uint64(userID)),
 		slog.Int("month", month),
 		slog.Int("year", year),
 		slog.Float64("spent", status.Spent),
@@ -360,7 +363,7 @@ func (h *BudgetHandler) GetByMonth(c *gin.Context) {
 		return
 	}
 
-	userID, err := strconv.Atoi(userIDStr)
+	userIDUint, err := strconv.ParseUint(userIDStr, 10, 64)
 	if err != nil {
 		h.logger.Warn("invalid user_id parameter",
 			slog.String("raw_user_id", userIDStr),
@@ -369,6 +372,7 @@ func (h *BudgetHandler) GetByMonth(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "некорректный user_id"})
 		return
 	}
+	userID := uint(userIDUint)
 
 	monthStr := c.Query("month")
 	if monthStr == "" {
@@ -408,7 +412,7 @@ func (h *BudgetHandler) GetByMonth(c *gin.Context) {
 	if err != nil {
 		if err == services.ErrBudgetNotFound {
 			h.logger.Warn("budget not found",
-				slog.Int("user_id", userID),
+				slog.Uint64("user_id", uint64(userID)),
 				slog.Int("month", month),
 				slog.Int("year", year),
 			)
@@ -416,7 +420,7 @@ func (h *BudgetHandler) GetByMonth(c *gin.Context) {
 			return
 		}
 		h.logger.Error("failed to get budget by month",
-			slog.Int("user_id", userID),
+			slog.Uint64("user_id", uint64(userID)),
 			slog.Int("month", month),
 			slog.Int("year", year),
 			slog.String("error", err.Error()),
@@ -426,7 +430,7 @@ func (h *BudgetHandler) GetByMonth(c *gin.Context) {
 	}
 
 	h.logger.Info("budget retrieved by month",
-		slog.Int("user_id", userID),
+		slog.Uint64("user_id", uint64(userID)),
 		slog.Int("month", month),
 		slog.Int("year", year),
 		slog.Uint64("budget_id", uint64(budget.ID)),

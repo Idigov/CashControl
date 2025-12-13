@@ -17,8 +17,8 @@ const (
 
 type RecurringExpense struct {
 	gorm.Model
-	UserID      int                  `gorm:"not null;index" json:"user_id"`             // Идентификатор пользователя
-	CategoryID  int                  `gorm:"not null;index" json:"category_id"`         // Идентификатор категории расхода
+	UserID      uint                 `gorm:"not null;index" json:"user_id"`             // Идентификатор пользователя
+	CategoryID  uint                 `gorm:"not null;index" json:"category_id"`         // Идентификатор категории расхода
 	Amount      float64              `gorm:"not null;type:decimal(10,2)" json:"amount"` // Сумма регулярного расхода
 	Description string               `json:"description"`                               // Описание регулярного расхода
 	Type        RecurringExpenseType `gorm:"not null" json:"type"`                      // Тип повторения ежедневно еженедельно ежемесячно ежегодно
@@ -33,7 +33,7 @@ type RecurringExpense struct {
 }
 
 type CreateRecurringExpenseRequest struct {
-	CategoryID  int                  `json:"category_id" binding:"required"`                            // Идентификатор категории расхода
+	CategoryID  uint                 `json:"category_id" binding:"required"`                            // Идентификатор категории расхода
 	Amount      float64              `json:"amount" binding:"required,gt=0"`                            // Сумма расхода должна быть больше нуля
 	Description string               `json:"description"`                                               // Описание регулярного расхода
 	Type        RecurringExpenseType `json:"type" binding:"required,oneof=daily weekly monthly yearly"` // Тип повторения
@@ -42,7 +42,7 @@ type CreateRecurringExpenseRequest struct {
 }
 
 type UpdateRecurringExpenseRequest struct {
-	CategoryID  *int                  `json:"category_id,omitempty"`  // Новый идентификатор категории
+	CategoryID  *uint                 `json:"category_id,omitempty"`  // Новый идентификатор категории
 	Amount      *float64              `json:"amount,omitempty"`       // Новая сумма расхода
 	Description *string               `json:"description,omitempty"`  // Новое описание расхода
 	Type        *RecurringExpenseType `json:"type,omitempty"`         // Новый тип повторения

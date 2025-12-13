@@ -13,7 +13,7 @@ var errCategoryNil error = errors.New("category is nil")
 type CategoryRepository interface {
 	List() ([]models.Category, error)
 	GetByID(id uint) (*models.Category, error)
-	GetByUserID(userID int) ([]models.Category, error)
+	GetByUserID(userID uint) ([]models.Category, error)
 	Create(category *models.Category) error
 	Update(category *models.Category) error
 	Delete(id uint) error
@@ -60,16 +60,16 @@ func (r *gormCategoryRepository) GetByID(id uint) (*models.Category, error) {
 	return &category, nil
 }
 
-func (r *gormCategoryRepository) GetByUserID(userID int) ([]models.Category, error) {
+func (r *gormCategoryRepository) GetByUserID(userID uint) ([]models.Category, error) {
 	r.logger.Debug("repo.category.get_by_user_id",
 		slog.String("op", "repo.category.get_by_user_id"),
-		slog.Int("user_id", userID),
+		slog.Uint64("user_id", uint64(userID)),
 	)
 	var categories []models.Category
 	if err := r.db.Where("user_id = ?", userID).Find(&categories).Error; err != nil {
 		r.logger.Error("repo.category.get_by_user_id failed",
 			slog.String("op", "repo.category.get_by_user_id"),
-			slog.Int("user_id", userID),
+			slog.Uint64("user_id", uint64(userID)),
 			slog.String("error", err.Error()),
 		)
 		return nil, err
