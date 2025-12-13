@@ -3,6 +3,7 @@ package database
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 
 	"cashcontrol/internal/config"
 	"cashcontrol/internal/models"
@@ -44,8 +45,11 @@ func createDatabaseIfNotExists(cfg *config.Config) error {
 	}
 
 	// Создаем базу данных, если её нет
+	// Валидация имени БД для безопасности (только буквы, цифры, подчеркивания)
 	if !exists {
-		_, err = db.Exec(fmt.Sprintf("CREATE DATABASE %s", cfg.DBName))
+		// Экранируем имя БД для безопасности (PostgreSQL требует двойные кавычки для идентификаторов)
+		quotedDBName := fmt.Sprintf(`"%s"`, strings.ReplaceAll(cfg.DBName, `"`, `""`))
+		_, err = db.Exec(fmt.Sprintf("CREATE DATABASE %s", quotedDBName))
 		if err != nil {
 			return fmt.Errorf("ошибка создания БД: %w", err)
 		}
@@ -56,17 +60,22 @@ func createDatabaseIfNotExists(cfg *config.Config) error {
 
 // Init инициализирует подключение к базе данных
 func Init(cfg *config.Config) error {
-	// Создаем базу данных, если её нет (только если используется отдельные параметры, не DATABASE_URL)
-	if cfg.DatabaseURL == "" {
+	// Создаем базу данных, если её нет (только для локальной разработки)
+	// Для облачных сервисов (Supabase, etc.) БД уже существует, создание не требуется
+	// Пропускаем создание БД если используется DATABASE_URL или хост не localhost
+	if !cfg.UseDatabaseURL && (cfg.DBHost == "localhost" || cfg.DBHost == "127.0.0.1") {
 		if err := createDatabaseIfNotExists(cfg); err != nil {
 			return fmt.Errorf("ошибка создания БД: %w", err)
 		}
 	}
 	var err error
 
-	dsn := cfg.DatabaseURL
-	if dsn == "" {
-		// Формируем DSN из отдельных параметров, если DATABASE_URL не указан
+	var dsn string
+	if cfg.UseDatabaseURL {
+		// Используем DATABASE_URL (для облачных сервисов: Supabase, etc.)
+		dsn = cfg.DatabaseURL
+	} else {
+		// Формируем DSN из отдельных параметров (для локальной разработки)
 		dsn = fmt.Sprintf(
 			"host=%s user=%s password=%s dbname=%s port=%s sslmode=%s",
 			cfg.DBHost,
@@ -92,7 +101,12 @@ func Init(cfg *config.Config) error {
 	}
 
 	if err := sqlDB.Ping(); err != nil {
-		return fmt.Errorf("ошибка ping БД: %w", err)
+		// Проверяем, является ли ошибка проблемой с IPv6 (для прямых подключений)
+		errStr := strings.ToLower(err.Error())
+		if strings.Contains(errStr, "no route to host") || strings.Contains(errStr, "ipv6") || strings.Contains(errStr, "network is unreachable") {
+			return fmt.Errorf("ошибка подключения к БД (IPv6 недоступен): %w", err)
+		}
+		return fmt.Errorf("ошибка подключения к БД: %w", err)
 	}
 
 	return nil

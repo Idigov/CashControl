@@ -1,0 +1,52 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Временные файлы и бинарники
+tmp/
+main
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Тестовые файлы
+*_test.go
+test_endpoints.sh
+TEST_ENDPOINTS.md
+POSTMAN_EXPENSES.md
+
+# Документация
+README.md
+TASKS.md
+*.md
+
+# Конфигурация разработки
+.env
+.env.local
+.env.*.local
+.air.toml
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Логи
+*.log
+
+# Кэш Go
+.cache/
+
