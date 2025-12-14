@@ -3,6 +3,7 @@ package handlers
 import (
 	"cashcontrol/internal/models"
 	"cashcontrol/internal/services"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -20,7 +21,7 @@ func NewExpenseHandler(service services.ExpenseService, logger *slog.Logger) *Ex
 	return &ExpenseHandler{service: service, logger: logger}
 }
 
-func (h *ExpenseHandler) RegisterRoutes(r *gin.Engine) {
+func (h *ExpenseHandler) RegisterRoutes(r *gin.RouterGroup) {
 	expenses := r.Group("/expenses")
 	{
 		expenses.GET("", h.List)
@@ -28,210 +29,177 @@ func (h *ExpenseHandler) RegisterRoutes(r *gin.Engine) {
 		expenses.GET("/:id", h.Get)
 		expenses.PATCH("/:id", h.Update)
 		expenses.DELETE("/:id", h.Delete)
+
 	}
 }
 
-func (h *ExpenseHandler) List(c *gin.Context) {
-	h.logger.Info("incoming request",
-		slog.String("method", c.Request.Method),
-		slog.String("path", c.FullPath()),
-	)
+// -------- LIST --------
 
-	filter, _ := h.parseExpenseFilter(c) // Игнорируем ошибку парсинга фильтра, так как все поля опциональны
+func (h *ExpenseHandler) List(c *gin.Context) {
+	userID := c.GetUint("user_id")
+	if userID == 0 {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+
+	filter, _ := h.parseExpenseFilter(c)
+	filter.UserID = userID
 
 	expenses, err := h.service.GetExpenseList(filter)
 	if err != nil {
-		h.logger.Error("failed to get expense list",
-			slog.String("error", err.Error()),
-		)
+		h.logger.Error("failed to list expenses", slog.String("error", err.Error()))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	h.logger.Info("expense list retrieved",
-		slog.Int("count", len(expenses)),
-	)
-
 	c.JSON(http.StatusOK, expenses)
 }
 
+// -------- CREATE --------
+
 func (h *ExpenseHandler) Create(c *gin.Context) {
-	h.logger.Info("incoming request",
-		slog.String("method", c.Request.Method),
-		slog.String("path", c.FullPath()),
-	)
-
-	userIDStr := c.Query("user_id")
-	if userIDStr == "" {
-		h.logger.Warn("missing user_id parameter")
-		c.JSON(http.StatusBadRequest, gin.H{"error": "необходим параметр user_id"})
+	userID := c.GetUint("user_id")
+	if userID == 0 {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return
 	}
-
-	userIDUint, err := strconv.ParseUint(userIDStr, 10, 64)
-	if err != nil {
-		h.logger.Warn("invalid user_id parameter",
-			slog.String("raw_user_id", userIDStr),
-			slog.String("reason", err.Error()),
-		)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "некорректный user_id"})
-		return
-	}
-	userID := uint(userIDUint)
 
 	var req models.CreateExpenseRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		h.logger.Warn("invalid request body",
-			slog.String("error", err.Error()),
-		)
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	expense, err := h.service.CreateExpense(userID, req)
+	fmt.Println("categoryID",expense.CategoryID)
 	if err != nil {
-		h.logger.Warn("failed to create expense",
-			slog.Uint64("user_id", uint64(userID)),
-			slog.String("error", err.Error()),
-		)
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	h.logger.Info("expense created",
-		slog.Uint64("expense_id", uint64(expense.ID)),
-		slog.Uint64("user_id", uint64(userID)),
-	)
-
 	c.JSON(http.StatusCreated, expense)
 }
 
+// -------- GET --------
+
 func (h *ExpenseHandler) Get(c *gin.Context) {
-	h.logger.Info("incoming request",
-		slog.String("method", c.Request.Method),
-		slog.String("path", c.FullPath()),
-		slog.String("raw_id", c.Param("id")),
-	)
+	userID := c.GetUint("user_id")
+	if userID == 0 {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
 
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		h.logger.Warn("invalid expense id",
-			slog.String("raw_id", c.Param("id")),
-			slog.String("reason", err.Error()),
-		)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "некорректный идентификатор"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
 		return
 	}
 
 	expense, err := h.service.GetExpenseByID(uint(id))
 	if err != nil {
 		if err == services.ErrExpenseNotFound {
-			h.logger.Warn("expense not found",
-				slog.Uint64("expense_id", id),
-			)
 			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 			return
 		}
-		h.logger.Error("failed to get expense",
-			slog.Uint64("expense_id", id),
-			slog.String("error", err.Error()),
-		)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	h.logger.Info("expense retrieved",
-		slog.Uint64("expense_id", id),
-	)
+	if expense.UserID != userID {
+		c.JSON(http.StatusForbidden, gin.H{"error": "access denied"})
+		return
+	}
 
 	c.JSON(http.StatusOK, expense)
 }
 
+// -------- UPDATE --------
+
 func (h *ExpenseHandler) Update(c *gin.Context) {
-	h.logger.Info("incoming request",
-		slog.String("method", c.Request.Method),
-		slog.String("path", c.FullPath()),
-		slog.String("raw_id", c.Param("id")),
-	)
+	userID := c.GetUint("user_id")
+	if userID == 0 {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
 
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		h.logger.Warn("invalid expense id",
-			slog.String("raw_id", c.Param("id")),
-			slog.String("reason", err.Error()),
-		)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "некорректный идентификатор"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
+	}
+
+	expense, err := h.service.GetExpenseByID(uint(id))
+	if err != nil {
+		if err == services.ErrExpenseNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	if expense.UserID != userID {
+		c.JSON(http.StatusForbidden, gin.H{"error": "access denied"})
 		return
 	}
 
 	var req models.UpdateExpenseRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		h.logger.Warn("invalid request body",
-			slog.String("error", err.Error()),
-		)
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	expense, err := h.service.UpdateExpense(uint(id), req)
+	updated, err := h.service.UpdateExpense(uint(id), req)
 	if err != nil {
-		h.logger.Warn("failed to update expense",
-			slog.Uint64("expense_id", id),
-			slog.String("error", err.Error()),
-		)
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	h.logger.Info("expense updated",
-		slog.Uint64("expense_id", id),
-	)
-
-	c.JSON(http.StatusOK, expense)
+	c.JSON(http.StatusOK, updated)
 }
 
+// -------- DELETE --------
+
 func (h *ExpenseHandler) Delete(c *gin.Context) {
-	h.logger.Info("incoming request",
-		slog.String("method", c.Request.Method),
-		slog.String("path", c.FullPath()),
-		slog.String("raw_id", c.Param("id")),
-	)
+	userID := c.GetUint("user_id")
+	if userID == 0 {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
 
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
-		h.logger.Warn("invalid expense id",
-			slog.String("raw_id", c.Param("id")),
-			slog.String("reason", err.Error()),
-		)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "некорректный идентификатор"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
 		return
 	}
 
-	if err := h.service.DeleteExpense(uint(id)); err != nil {
-		h.logger.Error("failed to delete expense",
-			slog.Uint64("expense_id", id),
-			slog.String("error", err.Error()),
-		)
+	expense, err := h.service.GetExpenseByID(uint(id))
+	if err != nil {
+		if err == services.ErrExpenseNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	h.logger.Info("expense deleted",
-		slog.Uint64("expense_id", id),
-	)
+	if expense.UserID != userID {
+		c.JSON(http.StatusForbidden, gin.H{"error": "access denied"})
+		return
+	}
 
-	c.Status(http.StatusOK)
+	if err := h.service.DeleteExpense(uint(id)); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.Status(http.StatusNoContent)
 }
+
+// -------- FILTER --------
 
 func (h *ExpenseHandler) parseExpenseFilter(c *gin.Context) (models.ExpenseFilter, error) {
 	var filter models.ExpenseFilter
-
-	// user_id обязателен
-	if v := c.Query("user_id"); v != "" {
-		if id, err := strconv.ParseUint(v, 10, 64); err == nil {
-			filter.UserID = uint(id)
-		}
-	}
 
 	if v := c.Query("category_id"); v != "" {
 		if id, err := strconv.ParseUint(v, 10, 64); err == nil {

@@ -12,13 +12,14 @@ type Config struct {
 	DatabaseURL   string
 	Environment   string
 
-	DBHost     string
-	DBUser     string
-	DBPassword string
-	DBName     string
-	DBPort     string
-	DBSSLMode  string
-	JWTSecret  string
+	DBHost           string
+	DBUser           string
+	DBPassword       string
+	DBName           string
+	DBPort           string
+	DBSSLMode        string
+	JWTSecret        string
+	TelegramBotToken string
 }
 
 func Load() (*Config, error) {
@@ -26,17 +27,19 @@ func Load() (*Config, error) {
 	_ = godotenv.Load()
 
 	cfg := &Config{
-		ServerAddress: getEnv("SERVER_ADDRESS", ":8080"),
+		ServerAddress: getEnv("SERVER_ADDRESS", ":8000"),
 		DatabaseURL:   getEnv("DATABASE_URL", ""),
 		Environment:   getEnv("ENVIRONMENT", "development"),
 
 		DBHost:     getEnv("DB_HOST", "localhost"),
-		DBUser:     getEnv("DB_USER", "postgres"),
-		DBPassword: getEnv("DB_PASSWORD", "postgres"),
+		DBUser:     getEnv("DB_USER", "rasul"),
+		DBPassword: getEnv("DB_PASSWORD", "Edb22edb22"),
 		DBName:     getEnv("DB_NAME", "cashcontrol"),
 		DBPort:     getEnv("DB_PORT", "5432"),
 		DBSSLMode:  getEnv("DB_SSLMODE", "disable"),
 		JWTSecret:  getEnv("JWT_SECRET", "secret"),
+		TelegramBotToken: getEnv("TELEGRAM_BOT_TOKEN", "8567102489:AAFACiJvXn4-DYXDFwhnQ1HhrlfJciGnxV8"),
+
 	}
 
 	if err := cfg.validate(); err != nil {

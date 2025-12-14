@@ -15,6 +15,13 @@ type Budget struct {
 	User User `gorm:"foreignKey:UserID" json:"-"` // Пользователь владелец бюджета
 }
 
+type BudgetSummary struct {
+	Limit     float64 `json:"limit"`
+	Spent     float64 `json:"spent"`
+	Remaining float64 `json:"remaining"`
+	Percent   int     `json:"percent"`
+}
+
 type CreateBudgetRequest struct {
 	Amount float64 `json:"amount" binding:"required,gt=0"`        // Сумма бюджета должна быть больше нуля
 	Month  int     `json:"month" binding:"required,min=1,max=12"` // Номер месяца от 1 до 12

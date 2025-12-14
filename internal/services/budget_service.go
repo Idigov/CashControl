@@ -21,6 +21,7 @@ type BudgetService interface {
 	GetBudgetList(userID uint) ([]models.Budget, error)
 	GetBudgetByID(id uint) (*models.Budget, error)
 	GetBudgetByUserIDAndMonth(userID uint, month, year int) (*models.Budget, error)
+	GetCurrentBudgetStatus(userID uint) (*models.BudgetStatus, error)
 	GetBudgetStatus(userID uint, month, year int) (*models.BudgetStatus, error)
 	UpdateBudget(id uint, req models.UpdateBudgetRequest) (*models.Budget, error)
 	DeleteBudget(id uint) error
@@ -119,6 +120,14 @@ func (s *budgetService) GetBudgetList(userID uint) ([]models.Budget, error) {
 	)
 
 	return budgets, nil
+}
+
+func (s *budgetService) GetCurrentBudgetStatus(userID uint) (*models.BudgetStatus, error) {
+	now := time.Now()
+	month := int(now.Month())
+	year := now.Year()
+
+	return s.GetBudgetStatus(userID, month, year)
 }
 
 func (s *budgetService) GetBudgetByID(id uint) (*models.Budget, error) {

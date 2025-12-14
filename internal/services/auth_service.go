@@ -3,8 +3,16 @@ package services
 import (
 	"cashcontrol/internal/models"
 	"cashcontrol/internal/repository"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"log/slog"
+	"net/url"
+	"sort"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -17,16 +25,31 @@ var ErrInvalidCredentials = errors.New("неверные учетные данн
 type AuthService interface {
 	Register(req models.RegisterRequest) (*models.LoginResponse, error)
 	Login(req models.LoginRequest) (*models.LoginResponse, error)
+	LoginWithTelegram(initData string) (*models.LoginResponse, error)
 }
 
 type authService struct {
-	users     repository.UserRepository
-	logger    *slog.Logger
-	jwtSecret string
+	users            repository.UserRepository
+	categories       repository.CategoryRepository
+	logger           *slog.Logger
+	jwtSecret        string
+	telegramBotToken string
 }
 
-func NewAuthService(users repository.UserRepository, logger *slog.Logger, jwtSecret string) AuthService {
-	return &authService{users: users, logger: logger, jwtSecret: jwtSecret}
+func NewAuthService(
+	users repository.UserRepository,
+	categories repository.CategoryRepository,
+	logger *slog.Logger,
+	jwtSecret string,
+	telegramBotToken string,
+) AuthService {
+	return &authService{
+		users:            users,
+		categories:       categories,
+		logger:           logger,
+		jwtSecret:        jwtSecret,
+		telegramBotToken: telegramBotToken,
+	}
 }
 
 func (s *authService) Register(req models.RegisterRequest) (*models.LoginResponse, error) {
@@ -55,10 +78,14 @@ func (s *authService) Register(req models.RegisterRequest) (*models.LoginRespons
 		return nil, err
 	}
 
+	email := req.Email
+	username := req.Username
+	password := string(hashed)
+
 	user := &models.User{
-		Email:    req.Email,
-		Username: req.Username,
-		Password: string(hashed),
+		Email:    &email,
+		Username: &username,
+		Password: &password,
 	}
 
 	if err := s.users.Create(user); err != nil {
@@ -80,8 +107,11 @@ func (s *authService) Login(req models.LoginRequest) (*models.LoginResponse, err
 		s.logger.Warn("user not found during login", slog.String("email", req.Email))
 		return nil, ErrInvalidCredentials
 	}
+	if user.Password == nil {
+		return nil, ErrInvalidCredentials
+	}
 
-	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password)); err != nil {
+	if err := bcrypt.CompareHashAndPassword([]byte(*user.Password), []byte(req.Password)); err != nil {
 		s.logger.Warn("invalid password for user", slog.Uint64("user_id", uint64(user.ID)))
 		return nil, ErrInvalidCredentials
 	}
@@ -119,4 +149,124 @@ func (s *authService) validateRegister(req models.RegisterRequest) error {
 		return errors.New("пароль должен быть не менее 6 символов")
 	}
 	return nil
+}
+
+func (s *authService) LoginWithTelegram(initData string) (*models.LoginResponse, error) {
+	telegramID, err := validateTelegramInitData(initData, s.telegramBotToken)
+	if err != nil {
+		s.logger.Warn("telegram auth failed", slog.String("error", err.Error()))
+		return nil, ErrInvalidCredentials
+	}
+
+	user, err := s.users.GetByTelegramID(telegramID)
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, err
+	}
+
+	if user == nil {
+		user = &models.User{
+			TelegramID: &telegramID,
+		}
+		if err := s.users.Create(user); err != nil {
+			return nil, err
+		}
+
+		s.createDefaultCategories(user.ID)
+	}
+
+	token, err := s.generateToken(user.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &models.LoginResponse{
+		Token: token,
+		User:  user,
+	}, nil
+}
+
+func validateTelegramInitData(initData, botToken string) (int64, error) {
+	values, err := url.ParseQuery(initData)
+	if err != nil {
+		return 0, err
+	}
+
+	hash := values.Get("hash")
+	if hash == "" {
+		return 0, errors.New("hash missing")
+	}
+	values.Del("hash")
+
+	// ⏱ Проверка auth_date
+	authDateStr := values.Get("auth_date")
+	if authDateStr == "" {
+		return 0, errors.New("auth_date missing")
+	}
+
+	authDate, err := strconv.ParseInt(authDateStr, 10, 64)
+	if err != nil {
+		return 0, errors.New("invalid auth_date")
+	}
+
+	if time.Now().Unix()-authDate > 86400 {
+		return 0, errors.New("telegram auth expired")
+	}
+
+	// 📦 Формируем data_check_string
+	var pairs []string
+	for k, v := range values {
+		pairs = append(pairs, k+"="+v[0])
+	}
+	sort.Strings(pairs)
+
+	dataCheckString := strings.Join(pairs, "\n")
+
+	// 🔑 КЛЮЧЕВОЕ ОТЛИЧИЕ ДЛЯ MINI APP
+	secretKey := hmac.New(sha256.New, []byte("WebAppData"))
+	secretKey.Write([]byte(botToken))
+	secret := secretKey.Sum(nil)
+
+	h := hmac.New(sha256.New, secret)
+	h.Write([]byte(dataCheckString))
+
+	calculatedHash := hex.EncodeToString(h.Sum(nil))
+
+	if calculatedHash != hash {
+		return 0, errors.New("invalid telegram signature")
+	}
+
+	// 👤 Извлекаем Telegram ID
+	if idStr := values.Get("id"); idStr != "" {
+		return strconv.ParseInt(idStr, 10, 64)
+	}
+
+	userJSON := values.Get("user")
+	if userJSON == "" {
+		return 0, errors.New("telegram user missing")
+	}
+
+	var tgUser struct {
+		ID int64 `json:"id"`
+	}
+	if err := json.Unmarshal([]byte(userJSON), &tgUser); err != nil {
+		return 0, err
+	}
+
+	return tgUser.ID, nil
+}
+
+func (s *authService) createDefaultCategories(userID uint) {
+	defaults := []models.Category{
+		{Name: "Еда", Color: "#F97316", Icon: "🍔"},
+		{Name: "Транспорт", Color: "#0EA5E9", Icon: "🚕"},
+		{Name: "Дом", Color: "#22C55E", Icon: "🏠"},
+		{Name: "Подписки", Color: "#8B5CF6", Icon: "📱"},
+	}
+
+	for _, c := range defaults {
+		category := c
+		category.UserID = userID
+		category.IsDefault = true
+		_ = s.categories.Create(&category)
+	}
 }

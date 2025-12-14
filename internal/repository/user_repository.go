@@ -14,6 +14,7 @@ type UserRepository interface {
 	List() ([]models.User, error)
 	GetByID(id uint) (*models.User, error)
 	GetByEmail(email string) (*models.User, error)
+	GetByTelegramID(telegramID int64) (*models.User, error) // ← ДОБАВИЛИ
 	Create(user *models.User) error
 	Update(user *models.User) error
 	Delete(id uint) error
@@ -77,6 +78,25 @@ func (r *gormUserRepository) GetByEmail(email string) (*models.User, error) {
 	return &user, nil
 }
 
+func (r *gormUserRepository) GetByTelegramID(telegramID int64) (*models.User, error) {
+	r.logger.Debug("repo.user.get_by_telegram_id",
+		slog.String("op", "repo.user.get_by_telegram_id"),
+		slog.Int64("telegram_id", telegramID),
+	)
+
+	var user models.User
+	if err := r.db.Where("telegram_id = ?", telegramID).First(&user).Error; err != nil {
+		r.logger.Error("repo.user.get_by_telegram_id failed",
+			slog.String("op", "repo.user.get_by_telegram_id"),
+			slog.Int64("telegram_id", telegramID),
+			slog.String("error", err.Error()),
+		)
+		return nil, err
+	}
+
+	return &user, nil
+}
+
 func (r *gormUserRepository) Create(user *models.User) error {
 	if user == nil {
 		return errUserNil
@@ -84,15 +104,15 @@ func (r *gormUserRepository) Create(user *models.User) error {
 
 	r.logger.Debug("repo.user.create",
 		slog.String("op", "repo.user.create"),
-		slog.String("email", user.Email),
-		slog.String("username", user.Username),
+		slog.String("email", strPtr(user.Email)),
+		slog.String("username", strPtr(user.Username)),
 	)
 
 	if err := r.db.Create(user).Error; err != nil {
 		r.logger.Error("repo.user.create failed",
 			slog.String("op", "repo.user.create"),
-			slog.String("email", user.Email),
-			slog.String("username", user.Username),
+			slog.String("email", strPtr(user.Email)),
+			slog.String("username", strPtr(user.Username)),
 			slog.String("error", err.Error()),
 		)
 		return err
@@ -134,4 +154,11 @@ func (r *gormUserRepository) Delete(id uint) error {
 		return err
 	}
 	return nil
+}
+
+func strPtr(v *string) string {
+	if v == nil {
+		return ""
+	}
+	return *v
 }

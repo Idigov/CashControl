@@ -38,10 +38,14 @@ func (s *userService) CreateUser(req models.RegisterRequest) (*models.User, erro
 		return nil, err
 	}
 
+	email := req.Email
+	username := req.Username
+	password := req.Password
+
 	user := &models.User{
-		Email:    req.Email,
-		Username: req.Username,
-		Password: req.Password, // В реальном приложении должно быть хешировано
+		Email:    &email,
+		Username: &username,
+		Password: &password,
 	}
 
 	if err := s.users.Create(user); err != nil {
@@ -56,8 +60,8 @@ func (s *userService) CreateUser(req models.RegisterRequest) (*models.User, erro
 
 	s.logger.Info("user created",
 		slog.Uint64("user_id", uint64(user.ID)),
-		slog.String("email", user.Email),
-		slog.String("username", user.Username),
+		slog.String("email", ptr(user.Email)),
+		slog.String("username", ptr(user.Username)),
 	)
 
 	return user, nil
@@ -99,8 +103,8 @@ func (s *userService) GetUserByID(id uint) (*models.User, error) {
 
 	s.logger.Info("user retrieved",
 		slog.Uint64("user_id", uint64(id)),
-		slog.String("email", user.Email),
-		slog.String("username", user.Username),
+		slog.String("email", ptr(user.Email)),
+		slog.String("username", ptr(user.Username)),
 	)
 
 	return user, nil
@@ -124,10 +128,10 @@ func (s *userService) UpdateUser(id uint, email, username string) (*models.User,
 	}
 
 	if email != "" {
-		user.Email = email
+		user.Email = &email
 	}
 	if username != "" {
-		user.Username = username
+		user.Username = &username
 	}
 
 	if err := s.users.Update(user); err != nil {
@@ -141,8 +145,8 @@ func (s *userService) UpdateUser(id uint, email, username string) (*models.User,
 
 	s.logger.Info("user updated",
 		slog.Uint64("user_id", uint64(id)),
-		slog.String("email", user.Email),
-		slog.String("username", user.Username),
+		slog.String("email", ptr(user.Email)),
+		slog.String("username", ptr(user.Username)),
 	)
 
 	return user, nil
@@ -195,4 +199,11 @@ func (s *userService) validateUserCreate(req models.RegisterRequest) error {
 		return errors.New("пароль должен быть не менее 6 символов")
 	}
 	return nil
+}
+
+func ptr(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
 }

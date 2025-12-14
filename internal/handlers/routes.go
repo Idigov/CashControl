@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"cashcontrol/internal/config"
+	"cashcontrol/internal/middleware"
 	"cashcontrol/internal/repository"
 	"cashcontrol/internal/services"
 	"log/slog"
@@ -11,42 +12,63 @@ import (
 )
 
 func RegisterRoutes(r *gin.Engine, db *gorm.DB, logger *slog.Logger, cfg *config.Config) {
-	// Инициализация репозиториев
+	// ---------- repositories ----------
 	userRepo := repository.NewUserRepository(db, logger)
 	categoryRepo := repository.NewCategoryRepository(db, logger)
 	expenseRepo := repository.NewExpenseRepository(db, logger)
 	budgetRepo := repository.NewBudgetRepository(db, logger)
 	recurringExpenseRepo := repository.NewRecurringExpenseRepository(db, logger)
-	_ = repository.NewActivityLogRepository(db, logger)
-	_ = repository.NewRecurringExpenseRepository(db, logger)
 
-	// Инициализация сервисов
+	// ---------- services ----------
 	userService := services.NewUserService(userRepo, logger)
 	categoryService := services.NewCategoryService(categoryRepo, logger)
 	expenseService := services.NewExpenseService(expenseRepo, categoryRepo, logger)
+	budgetService := services.NewBudgetService(budgetRepo, expenseRepo, logger)
 	recurringExpenseService := services.NewRecurringExpenseService(recurringExpenseRepo, expenseRepo, logger)
 
-	// Инициализация handlers и регистрация маршрутов
+	// ---------- API root ----------
+	api := r.Group("/api")
+
+	// ---------- AUTH (PUBLIC) ----------
+	authService := services.NewAuthService(
+		userRepo,
+		categoryRepo,
+		logger,
+		cfg.JWTSecret,
+		cfg.TelegramBotToken,
+	)
+	authHandler := NewAuthHandler(authService, logger)
+	authHandler.RegisterRoutes(api, cfg.JWTSecret)
+
+	// ---------- PROTECTED ----------
+	protected := api.Group("/")
+	protected.Use(middleware.AuthMiddleware(cfg.JWTSecret))
+
+	// ---------- handlers ----------
 	userHandler := NewUserHandler(userService, logger)
-	userHandler.RegisterRoutes(r)
+	userHandler.RegisterRoutes(protected)
 
 	categoryHandler := NewCategoryHandler(categoryService, logger)
-	categoryHandler.RegisterRoutes(r)
+	categoryHandler.RegisterRoutes(protected)
 
 	expenseHandler := NewExpenseHandler(expenseService, logger)
-	expenseHandler.RegisterRoutes(r)
+	expenseHandler.RegisterRoutes(protected)
 
-	budgetService := services.NewBudgetService(budgetRepo, expenseRepo, logger)
 	budgetHandler := NewBudgetHandler(budgetService, logger)
-	budgetHandler.RegisterRoutes(r)
+	budgetHandler.RegisterRoutes(protected)
 
 	recurringExpenseHandler := NewRecurringExpenseHandler(recurringExpenseService, logger)
-	recurringExpenseHandler.RegisterRoutes(r)
+	recurringExpenseHandler.RegisterRoutes(protected)
 
-	// Auth
-	authService := services.NewAuthService(userRepo, logger, cfg.JWTSecret)
-	authHandler := NewAuthHandler(authService, logger)
-	authHandler.RegisterRoutes(r)
+	analyticsRepo := repository.NewAnalyticsRepository(db)
+	analyticsService := services.NewAnalyticsService(analyticsRepo)
+	analyticsHandler := NewAnalyticsHandler(analyticsService)
+	analyticsHandler.RegisterRoutes(protected)
 
-	// TODO: Добавить handlers для ActivityLog если необходимо
+	statsRepo := repository.NewStatisticsRepository(db)
+	statsService := services.NewStatisticsService(statsRepo)
+	statsHandler := NewStatisticsHandler(statsService)
+
+	statsHandler.RegisterRoutes(api) 
+
 }

@@ -33,6 +33,7 @@ func NewExpenseService(expenses repository.ExpenseRepository, categories reposit
 	}
 }
 
+
 func (s *expenseService) CreateExpense(userID uint, req models.CreateExpenseRequest) (*models.Expense, error) {
 
 	if err := s.validateExpenseCreate(req); err != nil {
