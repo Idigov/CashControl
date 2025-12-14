@@ -9,8 +9,8 @@ import (
 type Expense struct {
 	gorm.Model
 
-	UserID      int       `gorm:"not null;index" json:"user_id"`             // Идентификатор пользователя
-	CategoryID  int       `gorm:"not null;index" json:"category_id"`         // Идентификатор категории расхода
+	UserID      uint      `gorm:"not null;index" json:"user_id"`             // Идентификатор пользователя
+	CategoryID  uint      `gorm:"not null;index" json:"category_id"`         // Идентификатор категории расхода
 	Amount      float64   `gorm:"not null;type:decimal(10,2)" json:"amount"` // Сумма расхода
 	Description string    `json:"description"`                               // Описание расхода
 	Date        time.Time `gorm:"not null;index" json:"date"`                // Дата расхода
@@ -20,22 +20,22 @@ type Expense struct {
 }
 
 type CreateExpenseRequest struct {
-	CategoryID  int       `json:"category_id" binding:"required"` // Идентификатор категории расхода
+	CategoryID  uint      `json:"category_id" binding:"required"` // Идентификатор категории расхода
 	Amount      float64   `json:"amount" binding:"required,gt=0"` // Сумма расхода должна быть больше нуля
 	Description string    `json:"description"`                    // Описание расхода
 	Date        time.Time `json:"date" binding:"required"`        // Дата расхода
 }
 
 type UpdateExpenseRequest struct {
-	CategoryID  *int       `json:"category_id,omitempty"` // Новый идентификатор категории
+	CategoryID  *uint      `json:"category_id,omitempty"` // Новый идентификатор категории
 	Amount      *float64   `json:"amount,omitempty"`      // Новая сумма расхода
 	Description *string    `json:"description,omitempty"` // Новое описание расхода
 	Date        *time.Time `json:"date,omitempty"`        // Новая дата расхода
 }
 
 type ExpenseFilter struct {
-	UserID     int        // Идентификатор пользователя для фильтрации
-	CategoryID *int       // Идентификатор категории для фильтрации
+	UserID     uint       // Идентификатор пользователя для фильтрации
+	CategoryID *uint      // Идентификатор категории для фильтрации
 	StartDate  *time.Time // Начальная дата периода для фильтрации
 	EndDate    *time.Time // Конечная дата периода для фильтрации
 	MinAmount  *float64   // Минимальная сумма для фильтрации

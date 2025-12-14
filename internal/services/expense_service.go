@@ -12,7 +12,7 @@ import (
 var ErrExpenseNotFound = errors.New("расход не найден")
 
 type ExpenseService interface {
-	CreateExpense(req models.CreateExpenseRequest) (*models.Expense, error)
+	CreateExpense(userID uint, req models.CreateExpenseRequest) (*models.Expense, error)
 	GetExpenseList(filter models.ExpenseFilter) ([]models.Expense, error)
 	GetExpenseByID(id uint) (*models.Expense, error)
 	UpdateExpense(id uint, req models.UpdateExpenseRequest) (*models.Expense, error)
@@ -20,19 +20,25 @@ type ExpenseService interface {
 }
 
 type expenseService struct {
-	expenses repository.ExpenseRepository
-	logger   *slog.Logger
+	expenses   repository.ExpenseRepository
+	categories repository.CategoryRepository
+	logger     *slog.Logger
 }
 
-func NewExpenseService(expenses repository.ExpenseRepository, logger *slog.Logger) ExpenseService {
-	return &expenseService{expenses: expenses, logger: logger}
+func NewExpenseService(expenses repository.ExpenseRepository, categories repository.CategoryRepository, logger *slog.Logger) ExpenseService {
+	return &expenseService{
+		expenses:   expenses,
+		categories: categories,
+		logger:     logger,
+	}
 }
 
-func (s *expenseService) CreateExpense(req models.CreateExpenseRequest) (*models.Expense, error) {
+func (s *expenseService) CreateExpense(userID uint, req models.CreateExpenseRequest) (*models.Expense, error) {
 
 	if err := s.validateExpenseCreate(req); err != nil {
 		s.logger.Warn("expense create validation failed",
-			slog.Int("category_id", req.CategoryID),
+			slog.Uint64("user_id", uint64(userID)),
+			slog.Uint64("category_id", uint64(req.CategoryID)),
 			slog.Float64("amount", req.Amount),
 			slog.Time("date", req.Date),
 			slog.String("reason", err.Error()),
@@ -41,6 +47,7 @@ func (s *expenseService) CreateExpense(req models.CreateExpenseRequest) (*models
 	}
 
 	expense := &models.Expense{
+		UserID:      userID,
 		CategoryID:  req.CategoryID,
 		Description: req.Description,
 		Date:        req.Date,
@@ -56,6 +63,7 @@ func (s *expenseService) CreateExpense(req models.CreateExpenseRequest) (*models
 	}
 	s.logger.Info("expense created",
 		slog.Uint64("expense_id", uint64(expense.ID)),
+		slog.Uint64("user_id", uint64(userID)),
 		slog.Uint64("category_id", uint64(expense.CategoryID)),
 		slog.Float64("amount", expense.Amount),
 		slog.Time("date", expense.Date),
@@ -191,7 +199,18 @@ func (s *expenseService) validateExpenseCreate(req models.CreateExpenseRequest) 
 		return errors.New("сумма должна быть больше нуля")
 	}
 
-	// TODO req.CategoryID проверка на существование категории
+	// Проверка существования категории
+	_, err := s.categories.GetByID(req.CategoryID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return errors.New("категория не найдена")
+		}
+		s.logger.Error("failed to check category existence",
+			slog.Uint64("category_id", uint64(req.CategoryID)),
+			slog.String("error", err.Error()),
+		)
+		return errors.New("ошибка при проверке категории")
+	}
 
 	return nil
 }
@@ -199,6 +218,7 @@ func (s *expenseService) validateExpenseCreate(req models.CreateExpenseRequest) 
 func (s *expenseService) applyExpenseUpdate(expense *models.Expense, req models.UpdateExpenseRequest) error {
 	if req.CategoryID != nil {
 		expense.CategoryID = *req.CategoryID
+		// TODO: добавить валидацию существования категории при обновлении
 	}
 
 	if req.Description != nil {
@@ -218,5 +238,3 @@ func (s *expenseService) applyExpenseUpdate(expense *models.Expense, req models.
 
 	return nil
 }
-
-

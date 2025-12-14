@@ -13,10 +13,10 @@ import (
 var ErrRecurringExpenseNotFound = errors.New("регулярный расход не найден")
 
 type RecurringExpenseService interface {
-	CreateRecurringExpense(userID int, req models.CreateRecurringExpenseRequest) (*models.RecurringExpense, error)
-	GetRecurringExpenseList(userID int) ([]models.RecurringExpense, error)
+	CreateRecurringExpense(userID uint, req models.CreateRecurringExpenseRequest) (*models.RecurringExpense, error)
+	GetRecurringExpenseList(userID uint) ([]models.RecurringExpense, error)
 	GetRecurringExpenseByID(id uint) (*models.RecurringExpense, error)
-	GetActiveRecurringExpenses(userID int) ([]models.RecurringExpense, error)
+	GetActiveRecurringExpenses(userID uint) ([]models.RecurringExpense, error)
 	UpdateRecurringExpense(id uint, req models.UpdateRecurringExpenseRequest) (*models.RecurringExpense, error)
 	DeleteRecurringExpense(id uint) error
 	ActivateRecurringExpense(id uint) (*models.RecurringExpense, error)
@@ -43,10 +43,10 @@ func NewRecurringExpenseService(
 	}
 }
 
-func (s *recurringExpenseService) CreateRecurringExpense(userID int, req models.CreateRecurringExpenseRequest) (*models.RecurringExpense, error) {
+func (s *recurringExpenseService) CreateRecurringExpense(userID uint, req models.CreateRecurringExpenseRequest) (*models.RecurringExpense, error) {
 	if err := s.validateRecurringExpenseCreate(req); err != nil {
 		s.logger.Warn("recurring expense create validation failed",
-			slog.Int("user_id", userID),
+			slog.Uint64("user_id", uint64(userID)),
 			slog.String("type", string(req.Type)),
 			slog.String("reason", err.Error()),
 		)
@@ -71,7 +71,7 @@ func (s *recurringExpenseService) CreateRecurringExpense(userID int, req models.
 	if err := s.recurringExpenses.Create(recurringExpense); err != nil {
 		s.logger.Error("recurring expense create failed",
 			slog.String("op", "create_recurring_expense"),
-			slog.Int("user_id", userID),
+			slog.Uint64("user_id", uint64(userID)),
 			slog.Any("request", req),
 			slog.String("error", err.Error()),
 		)
@@ -80,7 +80,7 @@ func (s *recurringExpenseService) CreateRecurringExpense(userID int, req models.
 
 	s.logger.Info("recurring expense created",
 		slog.Uint64("recurring_expense_id", uint64(recurringExpense.ID)),
-		slog.Int("user_id", userID),
+		slog.Uint64("user_id", uint64(userID)),
 		slog.String("type", string(req.Type)),
 		slog.Time("next_date", nextDate),
 	)
@@ -88,19 +88,19 @@ func (s *recurringExpenseService) CreateRecurringExpense(userID int, req models.
 	return recurringExpense, nil
 }
 
-func (s *recurringExpenseService) GetRecurringExpenseList(userID int) ([]models.RecurringExpense, error) {
+func (s *recurringExpenseService) GetRecurringExpenseList(userID uint) ([]models.RecurringExpense, error) {
 	recurringExpenses, err := s.recurringExpenses.GetByUserID(userID)
 	if err != nil {
 		s.logger.Error("failed to list recurring expenses",
 			slog.String("op", "list_recurring_expenses"),
-			slog.Int("user_id", userID),
+			slog.Uint64("user_id", uint64(userID)),
 			slog.String("error", err.Error()),
 		)
 		return nil, err
 	}
 
 	s.logger.Info("recurring expenses listed",
-		slog.Int("user_id", userID),
+		slog.Uint64("user_id", uint64(userID)),
 		slog.Int("count", len(recurringExpenses)),
 	)
 
@@ -131,12 +131,12 @@ func (s *recurringExpenseService) GetRecurringExpenseByID(id uint) (*models.Recu
 	return recurringExpense, nil
 }
 
-func (s *recurringExpenseService) GetActiveRecurringExpenses(userID int) ([]models.RecurringExpense, error) {
+func (s *recurringExpenseService) GetActiveRecurringExpenses(userID uint) ([]models.RecurringExpense, error) {
 	allRecurringExpenses, err := s.recurringExpenses.GetByUserID(userID)
 	if err != nil {
 		s.logger.Error("failed to get recurring expenses",
 			slog.String("op", "get_active_recurring_expenses"),
-			slog.Int("user_id", userID),
+			slog.Uint64("user_id", uint64(userID)),
 			slog.String("error", err.Error()),
 		)
 		return nil, err
@@ -150,7 +150,7 @@ func (s *recurringExpenseService) GetActiveRecurringExpenses(userID int) ([]mode
 	}
 
 	s.logger.Info("active recurring expenses retrieved",
-		slog.Int("user_id", userID),
+		slog.Uint64("user_id", uint64(userID)),
 		slog.Int("count", len(activeRecurringExpenses)),
 	)
 

@@ -23,8 +23,7 @@ func RegisterRoutes(r *gin.Engine, db *gorm.DB, logger *slog.Logger, cfg *config
 	// Инициализация сервисов
 	userService := services.NewUserService(userRepo, logger)
 	categoryService := services.NewCategoryService(categoryRepo, logger)
-	expenseService := services.NewExpenseService(expenseRepo, logger)
-	_ = services.NewBudgetService(budgetRepo, expenseRepo, logger)
+	expenseService := services.NewExpenseService(expenseRepo, categoryRepo, logger)
 	recurringExpenseService := services.NewRecurringExpenseService(recurringExpenseRepo, expenseRepo, logger)
 
 	// Инициализация handlers и регистрация маршрутов
@@ -37,6 +36,10 @@ func RegisterRoutes(r *gin.Engine, db *gorm.DB, logger *slog.Logger, cfg *config
 	expenseHandler := NewExpenseHandler(expenseService, logger)
 	expenseHandler.RegisterRoutes(r)
 
+	budgetService := services.NewBudgetService(budgetRepo, expenseRepo, logger)
+	budgetHandler := NewBudgetHandler(budgetService, logger)
+	budgetHandler.RegisterRoutes(r)
+
 	recurringExpenseHandler := NewRecurringExpenseHandler(recurringExpenseService, logger)
 	recurringExpenseHandler.RegisterRoutes(r)
 
@@ -45,5 +48,5 @@ func RegisterRoutes(r *gin.Engine, db *gorm.DB, logger *slog.Logger, cfg *config
 	authHandler := NewAuthHandler(authService, logger)
 	authHandler.RegisterRoutes(r)
 
-	// TODO: Добавить handlers для Budget, ActivityLog, RecurringExpense если необходимо
+	// TODO: Добавить handlers для ActivityLog если необходимо
 }

@@ -17,11 +17,11 @@ const (
 )
 
 type BudgetService interface {
-	CreateBudget(userID int, req models.CreateBudgetRequest) (*models.Budget, error)
-	GetBudgetList(userID int) ([]models.Budget, error)
+	CreateBudget(userID uint, req models.CreateBudgetRequest) (*models.Budget, error)
+	GetBudgetList(userID uint) ([]models.Budget, error)
 	GetBudgetByID(id uint) (*models.Budget, error)
-	GetBudgetByUserIDAndMonth(userID int, month, year int) (*models.Budget, error)
-	GetBudgetStatus(userID int, month, year int) (*models.BudgetStatus, error)
+	GetBudgetByUserIDAndMonth(userID uint, month, year int) (*models.Budget, error)
+	GetBudgetStatus(userID uint, month, year int) (*models.BudgetStatus, error)
 	UpdateBudget(id uint, req models.UpdateBudgetRequest) (*models.Budget, error)
 	DeleteBudget(id uint) error
 }
@@ -40,10 +40,10 @@ func NewBudgetService(budgets repository.BudgetRepository, expenses repository.E
 	}
 }
 
-func (s *budgetService) CreateBudget(userID int, req models.CreateBudgetRequest) (*models.Budget, error) {
+func (s *budgetService) CreateBudget(userID uint, req models.CreateBudgetRequest) (*models.Budget, error) {
 	if err := s.validateBudgetCreate(req); err != nil {
 		s.logger.Warn("budget create validation failed",
-			slog.Int("user_id", userID),
+			slog.Uint64("user_id", uint64(userID)),
 			slog.Float64("amount", req.Amount),
 			slog.Int("month", req.Month),
 			slog.Int("year", req.Year),
@@ -54,9 +54,20 @@ func (s *budgetService) CreateBudget(userID int, req models.CreateBudgetRequest)
 
 	// Проверяем, не существует ли уже бюджет на этот месяц
 	existing, err := s.budgets.GetByUserIDAndMonth(userID, req.Month, req.Year)
-	if err == nil && existing != nil {
+	if err != nil {
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			s.logger.Error("failed to check existing budget",
+				slog.Uint64("user_id", uint64(userID)),
+				slog.Int("month", req.Month),
+				slog.Int("year", req.Year),
+				slog.String("error", err.Error()),
+			)
+			return nil, err
+		}
+		// ErrRecordNotFound - это нормально, бюджета нет
+	} else if existing != nil {
 		s.logger.Warn("budget already exists for this month",
-			slog.Int("user_id", userID),
+			slog.Uint64("user_id", uint64(userID)),
 			slog.Int("month", req.Month),
 			slog.Int("year", req.Year),
 		)
@@ -73,7 +84,7 @@ func (s *budgetService) CreateBudget(userID int, req models.CreateBudgetRequest)
 	if err := s.budgets.Create(budget); err != nil {
 		s.logger.Error("budget create failed",
 			slog.String("op", "create_budget"),
-			slog.Int("user_id", userID),
+			slog.Uint64("user_id", uint64(userID)),
 			slog.Any("request", req),
 			slog.String("error", err.Error()),
 		)
@@ -82,7 +93,7 @@ func (s *budgetService) CreateBudget(userID int, req models.CreateBudgetRequest)
 
 	s.logger.Info("budget created",
 		slog.Uint64("budget_id", uint64(budget.ID)),
-		slog.Int("user_id", userID),
+		slog.Uint64("user_id", uint64(userID)),
 		slog.Float64("amount", budget.Amount),
 		slog.Int("month", budget.Month),
 		slog.Int("year", budget.Year),
@@ -91,19 +102,19 @@ func (s *budgetService) CreateBudget(userID int, req models.CreateBudgetRequest)
 	return budget, nil
 }
 
-func (s *budgetService) GetBudgetList(userID int) ([]models.Budget, error) {
+func (s *budgetService) GetBudgetList(userID uint) ([]models.Budget, error) {
 	budgets, err := s.budgets.GetByUserID(userID)
 	if err != nil {
 		s.logger.Error("failed to list budgets",
 			slog.String("op", "list_budgets"),
-			slog.Int("user_id", userID),
+			slog.Uint64("user_id", uint64(userID)),
 			slog.String("error", err.Error()),
 		)
 		return nil, err
 	}
 
 	s.logger.Info("budgets listed",
-		slog.Int("user_id", userID),
+		slog.Uint64("user_id", uint64(userID)),
 		slog.Int("count", len(budgets)),
 	)
 
@@ -129,19 +140,19 @@ func (s *budgetService) GetBudgetByID(id uint) (*models.Budget, error) {
 
 	s.logger.Info("budget retrieved",
 		slog.Uint64("budget_id", uint64(budget.ID)),
-		slog.Int("user_id", budget.UserID),
+		slog.Uint64("user_id", uint64(budget.UserID)),
 		slog.Float64("amount", budget.Amount),
 	)
 
 	return budget, nil
 }
 
-func (s *budgetService) GetBudgetByUserIDAndMonth(userID int, month, year int) (*models.Budget, error) {
+func (s *budgetService) GetBudgetByUserIDAndMonth(userID uint, month, year int) (*models.Budget, error) {
 	budget, err := s.budgets.GetByUserIDAndMonth(userID, month, year)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			s.logger.Warn("budget not found",
-				slog.Int("user_id", userID),
+				slog.Uint64("user_id", uint64(userID)),
 				slog.Int("month", month),
 				slog.Int("year", year),
 			)
@@ -149,7 +160,7 @@ func (s *budgetService) GetBudgetByUserIDAndMonth(userID int, month, year int) (
 		}
 		s.logger.Error("failed to get budget",
 			slog.String("op", "get_budget_by_user_id_and_month"),
-			slog.Int("user_id", userID),
+			slog.Uint64("user_id", uint64(userID)),
 			slog.Int("month", month),
 			slog.Int("year", year),
 			slog.String("error", err.Error()),
@@ -160,7 +171,7 @@ func (s *budgetService) GetBudgetByUserIDAndMonth(userID int, month, year int) (
 	return budget, nil
 }
 
-func (s *budgetService) GetBudgetStatus(userID int, month, year int) (*models.BudgetStatus, error) {
+func (s *budgetService) GetBudgetStatus(userID uint, month, year int) (*models.BudgetStatus, error) {
 	budget, err := s.budgets.GetByUserIDAndMonth(userID, month, year)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -174,7 +185,7 @@ func (s *budgetService) GetBudgetStatus(userID int, month, year int) (*models.Bu
 	if err != nil {
 		s.logger.Error("failed to calculate spent amount",
 			slog.String("op", "get_budget_status"),
-			slog.Int("user_id", userID),
+			slog.Uint64("user_id", uint64(userID)),
 			slog.Int("month", month),
 			slog.Int("year", year),
 			slog.String("error", err.Error()),
@@ -189,9 +200,11 @@ func (s *budgetService) GetBudgetStatus(userID int, month, year int) (*models.Bu
 	}
 
 	// Определение процента использования бюджета
-	percentage := (spent / budget.Amount) * 100
+	var percentage float64
 	if budget.Amount == 0 {
 		percentage = 0
+	} else {
+		percentage = (spent / budget.Amount) * 100
 	}
 
 	// Проверка превышения и приближения к лимиту
@@ -211,7 +224,7 @@ func (s *budgetService) GetBudgetStatus(userID int, month, year int) (*models.Bu
 	if isExceeded {
 		s.logger.Warn("budget exceeded",
 			slog.Uint64("budget_id", uint64(budget.ID)),
-			slog.Int("user_id", userID),
+			slog.Uint64("user_id", uint64(userID)),
 			slog.Float64("budget_amount", budget.Amount),
 			slog.Float64("spent", spent),
 			slog.Float64("percentage", percentage),
@@ -219,7 +232,7 @@ func (s *budgetService) GetBudgetStatus(userID int, month, year int) (*models.Bu
 	} else if isNearLimit {
 		s.logger.Info("budget near limit",
 			slog.Uint64("budget_id", uint64(budget.ID)),
-			slog.Int("user_id", userID),
+			slog.Uint64("user_id", uint64(userID)),
 			slog.Float64("budget_amount", budget.Amount),
 			slog.Float64("spent", spent),
 			slog.Float64("percentage", percentage),
@@ -348,7 +361,7 @@ func (s *budgetService) applyBudgetUpdate(budget *models.Budget, req models.Upda
 	return nil
 }
 
-func (s *budgetService) calculateSpentAmount(userID int, month, year int) (float64, error) {
+func (s *budgetService) calculateSpentAmount(userID uint, month, year int) (float64, error) {
 	// Определяем начало и конец месяца
 	startDate := time.Date(year, time.Month(month), 1, 0, 0, 0, 0, time.UTC)
 	endDate := startDate.AddDate(0, 1, 0).Add(-time.Nanosecond)

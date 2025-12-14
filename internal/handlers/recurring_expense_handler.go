@@ -46,7 +46,16 @@ func (h *RecurringExpenseHandler) List(c *gin.Context) {
 		return
 	}
 
-	userID, err := strconv.Atoi(userIDStr)
+	userIDUint, err := strconv.ParseUint(userIDStr, 10, 64)
+	if err != nil {
+		h.logger.Warn("invalid user_id parameter",
+			slog.String("raw_user_id", userIDStr),
+			slog.String("reason", err.Error()),
+		)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "некорректный user_id"})
+		return
+	}
+	userID := uint(userIDUint)
 	if err != nil {
 		h.logger.Warn("invalid user_id parameter",
 			slog.String("raw_user_id", userIDStr),
@@ -59,7 +68,7 @@ func (h *RecurringExpenseHandler) List(c *gin.Context) {
 	recurringExpenses, err := h.service.GetRecurringExpenseList(userID)
 	if err != nil {
 		h.logger.Error("failed to get recurring expense list",
-			slog.Int("user_id", userID),
+			slog.Uint64("user_id", uint64(userID)),
 			slog.String("error", err.Error()),
 		)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -67,7 +76,7 @@ func (h *RecurringExpenseHandler) List(c *gin.Context) {
 	}
 
 	h.logger.Info("recurring expense list retrieved",
-		slog.Int("user_id", userID),
+		slog.Uint64("user_id", uint64(userID)),
 		slog.Int("count", len(recurringExpenses)),
 	)
 
@@ -87,7 +96,16 @@ func (h *RecurringExpenseHandler) Create(c *gin.Context) {
 		return
 	}
 
-	userID, err := strconv.Atoi(userIDStr)
+	userIDUint, err := strconv.ParseUint(userIDStr, 10, 64)
+	if err != nil {
+		h.logger.Warn("invalid user_id parameter",
+			slog.String("raw_user_id", userIDStr),
+			slog.String("reason", err.Error()),
+		)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "некорректный user_id"})
+		return
+	}
+	userID := uint(userIDUint)
 	if err != nil {
 		h.logger.Warn("invalid user_id parameter",
 			slog.String("raw_user_id", userIDStr),
@@ -109,7 +127,7 @@ func (h *RecurringExpenseHandler) Create(c *gin.Context) {
 	recurringExpense, err := h.service.CreateRecurringExpense(userID, req)
 	if err != nil {
 		h.logger.Warn("failed to create recurring expense",
-			slog.Int("user_id", userID),
+			slog.Uint64("user_id", uint64(userID)),
 			slog.String("error", err.Error()),
 		)
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -118,7 +136,7 @@ func (h *RecurringExpenseHandler) Create(c *gin.Context) {
 
 	h.logger.Info("recurring expense created",
 		slog.Uint64("recurring_expense_id", uint64(recurringExpense.ID)),
-		slog.Int("user_id", userID),
+		slog.Uint64("user_id", uint64(userID)),
 		slog.String("type", string(recurringExpense.Type)),
 	)
 
@@ -269,7 +287,16 @@ func (h *RecurringExpenseHandler) GetActive(c *gin.Context) {
 		return
 	}
 
-	userID, err := strconv.Atoi(userIDStr)
+	userIDUint, err := strconv.ParseUint(userIDStr, 10, 64)
+	if err != nil {
+		h.logger.Warn("invalid user_id parameter",
+			slog.String("raw_user_id", userIDStr),
+			slog.String("reason", err.Error()),
+		)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "некорректный user_id"})
+		return
+	}
+	userID := uint(userIDUint)
 	if err != nil {
 		h.logger.Warn("invalid user_id parameter",
 			slog.String("raw_user_id", userIDStr),
@@ -282,7 +309,7 @@ func (h *RecurringExpenseHandler) GetActive(c *gin.Context) {
 	recurringExpenses, err := h.service.GetActiveRecurringExpenses(userID)
 	if err != nil {
 		h.logger.Error("failed to get active recurring expenses",
-			slog.Int("user_id", userID),
+			slog.Uint64("user_id", uint64(userID)),
 			slog.String("error", err.Error()),
 		)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -290,7 +317,7 @@ func (h *RecurringExpenseHandler) GetActive(c *gin.Context) {
 	}
 
 	h.logger.Info("active recurring expenses retrieved",
-		slog.Int("user_id", userID),
+		slog.Uint64("user_id", uint64(userID)),
 		slog.Int("count", len(recurringExpenses)),
 	)
 

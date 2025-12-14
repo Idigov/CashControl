@@ -12,8 +12,8 @@ import (
 var ErrCategoryNotFound = errors.New("категория не найдена")
 
 type CategoryService interface {
-	CreateCategory(userID int, req models.CreateCategoryRequest) (*models.Category, error)
-	GetCategoryList(userID int) ([]models.Category, error)
+	CreateCategory(userID uint, req models.CreateCategoryRequest) (*models.Category, error)
+	GetCategoryList(userID uint) ([]models.Category, error)
 	GetCategoryByID(id uint) (*models.Category, error)
 	UpdateCategory(id uint, req models.UpdateCategoryRequest) (*models.Category, error)
 	DeleteCategory(id uint) error
@@ -28,10 +28,10 @@ func NewCategoryService(categories repository.CategoryRepository, logger *slog.L
 	return &categoryService{categories: categories, logger: logger}
 }
 
-func (s *categoryService) CreateCategory(userID int, req models.CreateCategoryRequest) (*models.Category, error) {
+func (s *categoryService) CreateCategory(userID uint, req models.CreateCategoryRequest) (*models.Category, error) {
 	if err := s.validateCategoryCreate(req); err != nil {
 		s.logger.Warn("category create validation failed",
-			slog.Int("user_id", userID),
+			slog.Uint64("user_id", uint64(userID)),
 			slog.String("name", req.Name),
 			slog.String("reason", err.Error()),
 		)
@@ -48,7 +48,7 @@ func (s *categoryService) CreateCategory(userID int, req models.CreateCategoryRe
 	if err := s.categories.Create(category); err != nil {
 		s.logger.Error("category create failed",
 			slog.String("op", "create_category"),
-			slog.Int("user_id", userID),
+			slog.Uint64("user_id", uint64(userID)),
 			slog.String("name", req.Name),
 			slog.String("error", err.Error()),
 		)
@@ -57,26 +57,26 @@ func (s *categoryService) CreateCategory(userID int, req models.CreateCategoryRe
 
 	s.logger.Info("category created",
 		slog.Uint64("category_id", uint64(category.ID)),
-		slog.Int("user_id", userID),
+		slog.Uint64("user_id", uint64(userID)),
 		slog.String("name", category.Name),
 	)
 
 	return category, nil
 }
 
-func (s *categoryService) GetCategoryList(userID int) ([]models.Category, error) {
+func (s *categoryService) GetCategoryList(userID uint) ([]models.Category, error) {
 	categories, err := s.categories.GetByUserID(userID)
 	if err != nil {
 		s.logger.Error("failed to list categories",
 			slog.String("op", "list_categories"),
-			slog.Int("user_id", userID),
+			slog.Uint64("user_id", uint64(userID)),
 			slog.String("error", err.Error()),
 		)
 		return nil, err
 	}
 
 	s.logger.Info("categories listed",
-		slog.Int("user_id", userID),
+		slog.Uint64("user_id", uint64(userID)),
 		slog.Int("count", len(categories)),
 	)
 

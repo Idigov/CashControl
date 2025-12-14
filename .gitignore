@@ -6,6 +6,8 @@
 *.dylib
 bin/
 dist/
+tmp/
+main
 
 # Test binary
 *.test

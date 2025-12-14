@@ -13,8 +13,8 @@ var errBudgetNil error = errors.New("budget is nil")
 type BudgetRepository interface {
 	List() ([]models.Budget, error)
 	GetByID(id uint) (*models.Budget, error)
-	GetByUserIDAndMonth(userID int, month, year int) (*models.Budget, error)
-	GetByUserID(userID int) ([]models.Budget, error)
+	GetByUserIDAndMonth(userID uint, month, year int) (*models.Budget, error)
+	GetByUserID(userID uint) ([]models.Budget, error)
 	Create(budget *models.Budget) error
 	Update(budget *models.Budget) error
 	Delete(id uint) error
@@ -61,10 +61,10 @@ func (r *gormBudgetRepository) GetByID(id uint) (*models.Budget, error) {
 	return &budget, nil
 }
 
-func (r *gormBudgetRepository) GetByUserIDAndMonth(userID int, month, year int) (*models.Budget, error) {
+func (r *gormBudgetRepository) GetByUserIDAndMonth(userID uint, month, year int) (*models.Budget, error) {
 	r.logger.Debug("repo.budget.get_by_user_id_and_month",
 		slog.String("op", "repo.budget.get_by_user_id_and_month"),
-		slog.Int("user_id", userID),
+		slog.Uint64("user_id", uint64(userID)),
 		slog.Int("month", month),
 		slog.Int("year", year),
 	)
@@ -72,7 +72,7 @@ func (r *gormBudgetRepository) GetByUserIDAndMonth(userID int, month, year int) 
 	if err := r.db.Where("user_id = ? AND month = ? AND year = ?", userID, month, year).First(&budget).Error; err != nil {
 		r.logger.Error("repo.budget.get_by_user_id_and_month failed",
 			slog.String("op", "repo.budget.get_by_user_id_and_month"),
-			slog.Int("user_id", userID),
+			slog.Uint64("user_id", uint64(userID)),
 			slog.Int("month", month),
 			slog.Int("year", year),
 			slog.String("error", err.Error()),
@@ -82,16 +82,16 @@ func (r *gormBudgetRepository) GetByUserIDAndMonth(userID int, month, year int) 
 	return &budget, nil
 }
 
-func (r *gormBudgetRepository) GetByUserID(userID int) ([]models.Budget, error) {
+func (r *gormBudgetRepository) GetByUserID(userID uint) ([]models.Budget, error) {
 	r.logger.Debug("repo.budget.get_by_user_id",
 		slog.String("op", "repo.budget.get_by_user_id"),
-		slog.Int("user_id", userID),
+		slog.Uint64("user_id", uint64(userID)),
 	)
 	var budgets []models.Budget
 	if err := r.db.Where("user_id = ?", userID).Order("year DESC, month DESC").Find(&budgets).Error; err != nil {
 		r.logger.Error("repo.budget.get_by_user_id failed",
 			slog.String("op", "repo.budget.get_by_user_id"),
-			slog.Int("user_id", userID),
+			slog.Uint64("user_id", uint64(userID)),
 			slog.String("error", err.Error()),
 		)
 		return nil, err
@@ -106,7 +106,7 @@ func (r *gormBudgetRepository) Create(budget *models.Budget) error {
 
 	r.logger.Debug("repo.budget.create",
 		slog.String("op", "repo.budget.create"),
-		slog.Int("user_id", budget.UserID),
+		slog.Uint64("user_id", uint64(budget.UserID)),
 		slog.Float64("amount", budget.Amount),
 		slog.Int("month", budget.Month),
 		slog.Int("year", budget.Year),
@@ -115,7 +115,7 @@ func (r *gormBudgetRepository) Create(budget *models.Budget) error {
 	if err := r.db.Create(budget).Error; err != nil {
 		r.logger.Error("repo.budget.create failed",
 			slog.String("op", "repo.budget.create"),
-			slog.Int("user_id", budget.UserID),
+			slog.Uint64("user_id", uint64(budget.UserID)),
 			slog.Float64("amount", budget.Amount),
 			slog.Int("month", budget.Month),
 			slog.Int("year", budget.Year),

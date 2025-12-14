@@ -6,7 +6,7 @@ import (
 
 type Budget struct {
 	gorm.Model
-	UserID int     `gorm:"not null;index" json:"user_id"`                          // Идентификатор пользователя
+	UserID uint    `gorm:"not null;index" json:"user_id"`                          // Идентификатор пользователя
 	Amount float64 `gorm:"not null;type:decimal(10,2)" json:"amount"`              // Сумма месячного бюджета
 	Month  int     `gorm:"not null;check:month >= 1 AND month <= 12" json:"month"` // Номер месяца от 1 до 12
 	Year   int     `gorm:"not null" json:"year"`                                   // Год бюджета

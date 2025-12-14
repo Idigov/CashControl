@@ -9,6 +9,7 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
 )
 
 var ErrInvalidCredentials = errors.New("неверные учетные данные")
@@ -35,7 +36,15 @@ func (s *authService) Register(req models.RegisterRequest) (*models.LoginRespons
 	}
 
 	// проверим, что пользователь с email не существует
-	if u, _ := s.users.GetByEmail(req.Email); u != nil {
+	u, err := s.users.GetByEmail(req.Email)
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		s.logger.Error("failed to check email existence",
+			slog.String("email", req.Email),
+			slog.String("error", err.Error()),
+		)
+		return nil, errors.New("ошибка при проверке email")
+	}
+	if u != nil {
 		return nil, errors.New("пользователь с таким email уже существует")
 	}
 

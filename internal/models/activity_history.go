@@ -24,10 +24,10 @@ const (
 
 type ActivityHistory struct {
 	gorm.Model
-	UserID       int          `gorm:"not null;index" json:"user_id"`       // Идентификатор пользователя
+	UserID       uint         `gorm:"not null;index" json:"user_id"`       // Идентификатор пользователя
 	ActivityType ActivityType `gorm:"not null;index" json:"activity_type"` // Тип действия создание обновление удаление
 	EntityType   string       `gorm:"not null" json:"entity_type"`         // Тип сущности расход категория бюджет регулярный расход
-	EntityID     int          `gorm:"not null" json:"entity_id"`           // Идентификатор сущности над которой выполнено действие
+	EntityID     uint         `gorm:"not null" json:"entity_id"`           // Идентификатор сущности над которой выполнено действие
 	Description  string       `json:"description"`                         // Текстовое описание выполненного действия
 	Metadata     string       `gorm:"type:jsonb" json:"metadata"`          // Дополнительные данные действия в формате JSON
 
@@ -36,16 +36,16 @@ type ActivityHistory struct {
 }
 
 type CreateActivityLogRequest struct {
-	UserID       int                    `json:"user_id"`       // Кто совершил действие
+	UserID       uint                   `json:"user_id"`       // Кто совершил действие
 	ActivityType ActivityType           `json:"activity_type"` // Тип действия
 	EntityType   string                 `json:"entity_type"`   // На какой сущности
-	EntityID     int                    `json:"entity_id"`     // ID сущности
+	EntityID     uint                   `json:"entity_id"`     // ID сущности
 	Description  string                 `json:"description"`   // Текстовое описание
 	Metadata     map[string]interface{} `json:"metadata"`      // Дополнительные данные (будут сериализованы в JSONB)
 }
 
 type ActivityFilter struct {
-	UserID       int           // Идентификатор пользователя для фильтрации
+	UserID       uint          // Идентификатор пользователя для фильтрации
 	ActivityType *ActivityType // Тип действия для фильтрации
 	EntityType   *string       // Тип сущности для фильтрации
 	StartDate    *time.Time    // Начальная дата периода для фильтрации

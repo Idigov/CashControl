@@ -58,7 +58,7 @@ func (r *gormExpenseRepository) List(filter models.ExpenseFilter) ([]models.Expe
 		query = query.Offset(*filter.Offset)
 	}
 
-	if err := r.db.Find(&expenses).Error; err != nil {
+	if err := query.Find(&expenses).Error; err != nil {
 		r.logger.Error("repo.expense.list failed",
 			slog.String("op", "repo.expense.list"),
 			slog.String("error", err.Error()),
@@ -94,7 +94,7 @@ func (r *gormExpenseRepository) Create(expense *models.Expense) error {
 		slog.String("op", "repo.expense.create"),
 		slog.Uint64("user_id", uint64(expense.UserID)),
 		slog.Float64("amount", expense.Amount),
-		slog.Int("category", expense.CategoryID),
+		slog.Uint64("category", uint64(expense.CategoryID)),
 	)
 
 	if err := r.db.Create(expense).Error; err != nil {
@@ -102,7 +102,7 @@ func (r *gormExpenseRepository) Create(expense *models.Expense) error {
 			slog.String("op", "repo.expense.create"),
 			slog.Uint64("user_id", uint64(expense.UserID)),
 			slog.Float64("amount", expense.Amount),
-			slog.Int("category", expense.CategoryID),
+			slog.Uint64("category", uint64(expense.CategoryID)),
 			slog.String("error", err.Error()),
 		)
 		return err
