@@ -59,6 +59,9 @@ CashControl/
 ├── .env                               # Переменные окружения
 ├── .env.example                       # Пример переменных окружения
 ├── .air.toml                          # Конфигурация Air для hot reload
+├── .dockerignore                      # Исключения для Docker
+├── Dockerfile                         # Конфигурация Docker образа
+├── docker-compose.yml                # Конфигурация Docker Compose
 ├── .gitignore                         # Игнорируемые файлы
 ├── go.mod                             # Зависимости Go
 ├── go.sum                             # Checksums зависимостей
@@ -67,17 +70,74 @@ CashControl/
 ├── TASKS.md                           # Список задач проекта
 ├── TEST_ENDPOINTS.md                  # Документация по тестированию
 ├── POSTMAN_EXPENSES.md                # Документация Postman для Expenses
-└── test_endpoints.sh                  # Скрипт для тестирования эндпоинтов
 ```
 
 ## Запуск
+
+### Вариант 1: Запуск через Docker (рекомендуется)
+
+Этот способ не требует локальной установки PostgreSQL - используется облачная база данных Supabase.
+
+#### Настройка Supabase
+
+1. Создайте аккаунт на [supabase.com](https://supabase.com) (бесплатно)
+2. Создайте новый проект
+3. Перейдите в **Settings → Database**
+4. Скопируйте **Connection string** (URI mode)
+5. Формат строки: `postgresql://postgres:[PASSWORD]@[HOST]:5432/postgres?sslmode=require`
+
+#### Настройка переменных окружения
+
+Создайте файл `.env` в корне проекта:
+
+```bash
+# Адрес сервера
+SERVER_ADDRESS=:8080
+ENVIRONMENT=production
+
+# Строка подключения к Supabase (замените на вашу)
+DATABASE_URL=postgresql://postgres:your-password@db.xxxxx.supabase.co:5432/postgres?sslmode=require
+
+# JWT секрет (измените на случайную строку!)
+JWT_SECRET=your-secret-key-change-in-production
+```
+
+#### Запуск через Docker Compose
+
+```bash
+# Сборка и запуск контейнера
+docker-compose up --build
+
+# Запуск в фоновом режиме
+docker-compose up -d
+
+# Просмотр логов
+docker-compose logs -f
+
+# Остановка
+docker-compose down
+```
+
+Приложение будет доступно по адресу: `http://localhost:8080`
+
+#### Прямая сборка Docker образа
+
+```bash
+# Сборка образа
+docker build -t cashcontrol .
+
+# Запуск контейнера
+docker run -p 8080:8080 --env-file .env cashcontrol
+```
+
+### Вариант 2: Локальный запуск (требуется локальный PostgreSQL)
 
 1. Установите зависимости:
 ```bash
 go mod download
 ```
 
-2. Настройте `.env` файл с параметрами подключения к PostgreSQL
+2. Настройте `.env` файл с параметрами подключения к локальному PostgreSQL
 
 3. Запустите сервер:
 ```bash
@@ -140,6 +200,20 @@ air
 - **Go** - Язык программирования
 - **Gin** - HTTP веб-фреймворк
 - **GORM** - ORM для работы с БД
-- **PostgreSQL** - База данных
+- **PostgreSQL** - База данных (Supabase для облачного варианта)
+- **Docker** - Контейнеризация приложения
 - **Air** - Hot reload для разработки
 
+## Деплой
+
+Приложение готово к деплою на любую платформу, поддерживающую Docker:
+- **Railway** - автоматический деплой из Git репозитория
+- **Render** - простой деплой с поддержкой Docker
+- **Fly.io** - быстрый деплой с глобальной сетью
+- **DigitalOcean App Platform** - масштабируемый деплой
+
+Для деплоя:
+1. Подключите ваш Git репозиторий
+2. Укажите Dockerfile как источник сборки
+3. Настройте переменные окружения (DATABASE_URL, JWT_SECRET)
+4. Деплой произойдет автоматически

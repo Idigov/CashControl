@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cashcontrol
+    ports:
+      - "8080:8080"
+    environment:
+      # Адрес сервера
+      - SERVER_ADDRESS=:8080
+      - ENVIRONMENT=production
+
+      # Подключение к базе данных (Supabase)
+      # Замените на вашу строку подключения из Supabase
+      - DATABASE_URL=${DATABASE_URL}
+
+      # Альтернативный способ - отдельные параметры БД
+      # Раскомментируйте, если не используете DATABASE_URL
+      # - DB_HOST=${DB_HOST:-localhost}
+      # - DB_USER=${DB_USER:-postgres}
+      # - DB_PASSWORD=${DB_PASSWORD}
+      # - DB_NAME=${DB_NAME:-cashcontrol}
+      # - DB_PORT=${DB_PORT:-5432}
+      # - DB_SSLMODE=${DB_SSLMODE:-require}
+
+      # JWT секрет
+      - JWT_SECRET=${JWT_SECRET:-your-secret-key-change-in-production}
+    env_file:
+      - .env
+    restart: unless-stopped
+    networks:
+      - cashcontrol-network
+
+networks:
+  cashcontrol-network:
+    driver: bridge
+    enable_ipv6: true
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+        - subnet: 2001:db8::/32

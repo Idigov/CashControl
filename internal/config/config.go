@@ -19,15 +19,33 @@ type Config struct {
 	DBPort     string
 	DBSSLMode  string
 	JWTSecret  string
+
+	// UseDatabaseURL определяет, использовать ли DATABASE_URL или отдельные параметры
+	// Автоматически определяется: если DATABASE_URL задан - true, иначе - false
+	UseDatabaseURL bool
 }
 
 func Load() (*Config, error) {
 	// Загрузка .env файла
 	_ = godotenv.Load()
 
+	databaseURL := getEnv("DATABASE_URL", "")
+
+	// Определяем формат подключения:
+	// 1. Если задан USE_DATABASE_URL - используем его значение
+	// 2. Иначе автоматически: если DATABASE_URL задан - true, иначе - false
+	useDatabaseURL := getEnv("USE_DATABASE_URL", "")
+	var useURL bool
+	if useDatabaseURL != "" {
+		useURL = useDatabaseURL == "true" || useDatabaseURL == "1"
+	} else {
+		// Автоматическое определение: если DATABASE_URL задан - используем его
+		useURL = databaseURL != ""
+	}
+
 	cfg := &Config{
 		ServerAddress: getEnv("SERVER_ADDRESS", ":8080"),
-		DatabaseURL:   getEnv("DATABASE_URL", ""),
+		DatabaseURL:   databaseURL,
 		Environment:   getEnv("ENVIRONMENT", "development"),
 
 		DBHost:     getEnv("DB_HOST", "localhost"),
@@ -37,6 +55,8 @@ func Load() (*Config, error) {
 		DBPort:     getEnv("DB_PORT", "5432"),
 		DBSSLMode:  getEnv("DB_SSLMODE", "disable"),
 		JWTSecret:  getEnv("JWT_SECRET", "secret"),
+
+		UseDatabaseURL: useURL,
 	}
 
 	if err := cfg.validate(); err != nil {
