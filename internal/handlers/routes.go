@@ -17,6 +17,7 @@ func RegisterRoutes(r *gin.Engine, db *gorm.DB, logger *slog.Logger, cfg *config
 	expenseRepo := repository.NewExpenseRepository(db, logger)
 	budgetRepo := repository.NewBudgetRepository(db, logger)
 	recurringExpenseRepo := repository.NewRecurringExpenseRepository(db, logger)
+	statisticsRepo := repository.NewStatisticsRepository(db, logger)
 	_ = repository.NewActivityLogRepository(db, logger)
 	_ = repository.NewRecurringExpenseRepository(db, logger)
 
@@ -25,6 +26,7 @@ func RegisterRoutes(r *gin.Engine, db *gorm.DB, logger *slog.Logger, cfg *config
 	categoryService := services.NewCategoryService(categoryRepo, logger)
 	expenseService := services.NewExpenseService(expenseRepo, categoryRepo, logger)
 	recurringExpenseService := services.NewRecurringExpenseService(recurringExpenseRepo, expenseRepo, logger)
+	statisticsService := services.NewStatisticsService(statisticsRepo, logger)
 
 	// Инициализация handlers и регистрация маршрутов
 	userHandler := NewUserHandler(userService, logger)
@@ -42,6 +44,10 @@ func RegisterRoutes(r *gin.Engine, db *gorm.DB, logger *slog.Logger, cfg *config
 
 	recurringExpenseHandler := NewRecurringExpenseHandler(recurringExpenseService, logger)
 	recurringExpenseHandler.RegisterRoutes(r)
+
+	// Statistics
+	statisticsHandler := NewStatisticsHandler(statisticsService, logger)
+	statisticsHandler.RegisterRoutes(r)
 
 	// Auth
 	authService := services.NewAuthService(userRepo, logger, cfg.JWTSecret)

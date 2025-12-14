@@ -1,4 +1,4 @@
-.PHONY: run build test fmt vet lint tidy clean dev seed docker-up docker-down docker-stop docker-restart docker-logs test-endpoints test-auth test-users test-categories test-expenses test-budgets test-recurring
+.PHONY: run build test fmt vet lint tidy clean dev seed docker-up docker-down docker-stop docker-restart docker-logs test-endpoints test-auth test-users test-categories test-expenses test-budgets test-recurring test-statistics
 
 GO           ?= go
 BINARY       ?= cashcontrol
@@ -66,3 +66,6 @@ test-budgets: ## Тестирование Budget эндпоинтов
 
 test-recurring: ## Тестирование Recurring Expense эндпоинтов
 	./tests/recurring_expenses_test.sh
+
+test-statistics: ## Тестирование Statistics эндпоинтов
+	./tests/statistics_test.sh

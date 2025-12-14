@@ -38,10 +38,16 @@ func (s *categoryService) CreateCategory(userID uint, req models.CreateCategoryR
 		return nil, err
 	}
 
+	// Устанавливаем default цвет, если не указан
+	color := req.Color
+	if color == "" {
+		color = "#3B82F6" // Default цвет
+	}
+
 	category := &models.Category{
 		UserID: userID,
 		Name:   req.Name,
-		Color:  req.Color,
+		Color:  color,
 		Icon:   req.Icon,
 	}
 

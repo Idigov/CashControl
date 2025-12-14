@@ -6,11 +6,11 @@ import (
 
 type Category struct {
 	gorm.Model
-	UserID    uint   `gorm:"not null;index" json:"user_id"`   // Идентификатор пользователя владельца категории
-	Name      string `gorm:"not null" json:"name"`            // Название категории
-	Color     string `gorm:"default:'#3B82F6'" json:"color"`  // Цвет категории
-	Icon      string `json:"icon"`                            // Иконка категории
-	IsDefault bool   `gorm:"default:false" json:"is_default"` // Флаг системной категории по умолчанию
+	UserID    uint   `gorm:"not null;index" json:"user_id"` // Идентификатор пользователя владельца категории
+	Name      string `gorm:"not null" json:"name"`          // Название категории
+	Color     string `json:"color"`                         // Цвет категории (default #3B82F6 устанавливается в сервисе)
+	Icon      string `json:"icon"`                          // Иконка категории
+	IsDefault bool   `json:"is_default"`                    // Флаг системной категории по умолчанию (default false)
 
 	// Связи
 	User     User      `gorm:"foreignKey:UserID" json:"-"`     // Пользователь владелец категории

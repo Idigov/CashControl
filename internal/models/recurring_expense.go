@@ -24,7 +24,7 @@ type RecurringExpense struct {
 	Type        RecurringExpenseType `gorm:"not null" json:"type"`                      // Тип повторения ежедневно еженедельно ежемесячно ежегодно
 	DayOfMonth  *int                 `json:"day_of_month"`                              // День месяца для ежемесячных расходов от 1 до 31
 	DayOfWeek   *int                 `json:"day_of_week"`                               // День недели для еженедельных расходов от 0 до 6 где 0 воскресенье
-	IsActive    bool                 `gorm:"default:true" json:"is_active"`             // Флаг активности регулярного расхода
+	IsActive    bool                 `json:"is_active"`                                 // Флаг активности регулярного расхода (default true)
 	NextDate    time.Time            `gorm:"not null;index" json:"next_date"`           // Следующая дата автоматического создания расхода
 
 	// Связи

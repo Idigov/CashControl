@@ -12,7 +12,7 @@ const (
 )
 
 type CategoryStatistics struct {
-	CategoryID    int     `json:"category_id"`    // Идентификатор категории
+	CategoryID    uint    `json:"category_id"`    // Идентификатор категории
 	CategoryName  string  `json:"category_name"`  // Название категории
 	CategoryColor string  `json:"category_color"` // Цвет категории
 	TotalAmount   float64 `json:"total_amount"`   // Общая сумма расходов в категории
@@ -31,9 +31,18 @@ type PeriodStatistics struct {
 }
 
 type ExpenseDistribution struct {
-	CategoryID    int     `json:"category_id"`    // Идентификатор категории
+	CategoryID    uint    `json:"category_id"`    // Идентификатор категории
 	CategoryName  string  `json:"category_name"`  // Название категории
 	CategoryColor string  `json:"category_color"` // Цвет категории
 	Amount        float64 `json:"amount"`         // Сумма расходов в категории
 	Percentage    float64 `json:"percentage"`     // Процент расходов в категории от общей суммы
+}
+
+// StatisticsFilter фильтр для запросов статистики
+type StatisticsFilter struct {
+	UserID     uint              // Идентификатор пользователя (обязательно)
+	CategoryID *uint             // Идентификатор категории для фильтрации (опционально)
+	StartDate  *time.Time        // Начальная дата периода (опционально)
+	EndDate    *time.Time        // Конечная дата периода (опционально)
+	Period     *StatisticsPeriod // Период группировки (опционально)
 }
