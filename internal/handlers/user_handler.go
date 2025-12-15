@@ -19,7 +19,7 @@ func NewUserHandler(service services.UserService, logger *slog.Logger) *UserHand
 	return &UserHandler{service: service, logger: logger}
 }
 
-func (h *UserHandler) RegisterRoutes(r *gin.Engine) {
+func (h *UserHandler) RegisterRoutes(r *gin.RouterGroup) {
 	users := r.Group("/users")
 	{
 		users.GET("", h.List)
@@ -78,7 +78,7 @@ func (h *UserHandler) Create(c *gin.Context) {
 
 	h.logger.Info("user created",
 		slog.Uint64("user_id", uint64(user.ID)),
-		slog.String("email", user.Email),
+		slog.String("email", *user.Email),
 	)
 
 	c.JSON(http.StatusCreated, user)

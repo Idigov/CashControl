@@ -4,18 +4,25 @@ import (
 	"gorm.io/gorm"
 )
 
+type TelegramAuthRequest struct {
+	InitData string `json:"init_data" binding:"required"`
+}
+
 type User struct {
 	gorm.Model
-	Email     string `gorm:"uniqueIndex;not null" json:"email"`    // Электронная почта пользователя
-	Username  string `gorm:"uniqueIndex;not null" json:"username"` // Имя пользователя
-	Password  string `gorm:"not null" json:"-"`                    // Хешированный пароль пользователя
+
+	TelegramID *int64  `gorm:"uniqueIndex" json:"telegram_id,omitempty"`
+
+	Email    *string `gorm:"uniqueIndex" json:"email,omitempty"`
+	Username *string `gorm:"uniqueIndex" json:"username,omitempty"`
+	Password *string `json:"-"`
 
 	// Связи
-	Expenses          []Expense          `gorm:"foreignKey:UserID" json:"-"` // Все расходы пользователя
-	Categories        []Category         `gorm:"foreignKey:UserID" json:"-"` // Все категории пользователя
-	Budgets           []Budget           `gorm:"foreignKey:UserID" json:"-"` // Все бюджеты пользователя
-	RecurringExpenses []RecurringExpense `gorm:"foreignKey:UserID" json:"-"` // Все регулярные расходы пользователя
-	ActivityHistory   []ActivityHistory  `gorm:"foreignKey:UserID" json:"-"` // Вся история действий пользователя
+	Expenses          []Expense          `gorm:"foreignKey:UserID" json:"-"`
+	Categories        []Category         `gorm:"foreignKey:UserID" json:"-"`
+	Budgets           []Budget           `gorm:"foreignKey:UserID" json:"-"`
+	RecurringExpenses []RecurringExpense `gorm:"foreignKey:UserID" json:"-"`
+	ActivityHistory   []ActivityHistory  `gorm:"foreignKey:UserID" json:"-"`
 }
 
 type RegisterRequest struct {

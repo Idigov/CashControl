@@ -16,6 +16,8 @@ require (
 	golang.org/x/sync v0.19.0 // indirect
 )
 
+require github.com/go-telegram-bot-api/telegram-bot-api/v5 v5.5.1
+
 require (
 	github.com/bytedance/sonic v1.9.1 // indirect
 	github.com/chenzhuoyu/base64x v0.0.0-20221115062448-fe3a3abad311 // indirect

@@ -11,18 +11,17 @@ type Config struct {
 	ServerAddress string
 	DatabaseURL   string
 	Environment   string
-
-	DBHost     string
-	DBUser     string
-	DBPassword string
-	DBName     string
-	DBPort     string
-	DBSSLMode  string
-	JWTSecret  string
-
 	// UseDatabaseURL определяет, использовать ли DATABASE_URL или отдельные параметры
 	// Автоматически определяется: если DATABASE_URL задан - true, иначе - false
 	UseDatabaseURL bool
+	DBHost           string
+	DBUser           string
+	DBPassword       string
+	DBName           string
+	DBPort           string
+	DBSSLMode        string
+	JWTSecret        string
+	TelegramBotToken string
 }
 
 func Load() (*Config, error) {
@@ -44,7 +43,7 @@ func Load() (*Config, error) {
 	}
 
 	cfg := &Config{
-		ServerAddress: getEnv("SERVER_ADDRESS", ":8080"),
+		ServerAddress: getEnv("SERVER_ADDRESS", ":8000"),
 		DatabaseURL:   databaseURL,
 		Environment:   getEnv("ENVIRONMENT", "development"),
 
@@ -57,6 +56,8 @@ func Load() (*Config, error) {
 		JWTSecret:  getEnv("JWT_SECRET", "secret"),
 
 		UseDatabaseURL: useURL,
+		TelegramBotToken: getEnv("TELEGRAM_BOT_TOKEN", "8567102489:AAFACiJvXn4-DYXDFwhnQ1HhrlfJciGnxV8"),
+
 	}
 
 	if err := cfg.validate(); err != nil {

@@ -19,7 +19,7 @@ func NewRecurringExpenseHandler(service services.RecurringExpenseService, logger
 	return &RecurringExpenseHandler{service: service, logger: logger}
 }
 
-func (h *RecurringExpenseHandler) RegisterRoutes(r *gin.Engine) {
+func (h *RecurringExpenseHandler) RegisterRoutes(r *gin.RouterGroup) {
 	recurringExpenses := r.Group("/recurring-expenses")
 	{
 		recurringExpenses.GET("", h.List)

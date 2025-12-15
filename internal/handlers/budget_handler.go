@@ -19,13 +19,14 @@ func NewBudgetHandler(service services.BudgetService, logger *slog.Logger) *Budg
 	return &BudgetHandler{service: service, logger: logger}
 }
 
-func (h *BudgetHandler) RegisterRoutes(r *gin.Engine) {
+func (h *BudgetHandler) RegisterRoutes(r *gin.RouterGroup) {
 	budgets := r.Group("/budgets")
 	{
 		budgets.GET("", h.List)
 		budgets.POST("", h.Create)
 		budgets.GET("/status", h.GetStatus)
 		budgets.GET("/by-month", h.GetByMonth)
+		budgets.GET("/current", h.GetCurrent)
 		budgets.GET("/:id", h.Get)
 		budgets.PATCH("/:id", h.Update)
 		budgets.DELETE("/:id", h.Delete)
@@ -73,6 +74,25 @@ func (h *BudgetHandler) List(c *gin.Context) {
 
 	c.JSON(http.StatusOK, budgets)
 }
+
+func (h *BudgetHandler) GetCurrent(c *gin.Context) {
+	userID := c.GetUint("user_id")
+
+	status, err := h.service.GetCurrentBudgetStatus(userID)
+	if err != nil {
+		if err == services.ErrBudgetNotFound {
+			c.JSON(200, gin.H{
+				"empty": true,
+			})
+			return
+		}
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(200, status)
+}
+
 
 func (h *BudgetHandler) Create(c *gin.Context) {
 	h.logger.Info("incoming request",
