@@ -43,7 +43,7 @@ func Load() (*Config, error) {
 	}
 
 	cfg := &Config{
-		ServerAddress: getEnv("SERVER_ADDRESS", ":8000"),
+		ServerAddress: getEnv("SERVER_ADDRESS", ":8080"),
 		DatabaseURL:   databaseURL,
 		Environment:   getEnv("ENVIRONMENT", "development"),
 

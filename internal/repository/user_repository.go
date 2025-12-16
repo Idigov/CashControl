@@ -15,6 +15,7 @@ type UserRepository interface {
 	GetByID(id uint) (*models.User, error)
 	GetByEmail(email string) (*models.User, error)
 	GetByTelegramID(telegramID int64) (*models.User, error) // ← ДОБАВИЛИ
+	UpdateChatIDByUserID(userID uint, chatID int64) error
 	Create(user *models.User) error
 	Update(user *models.User) error
 	Delete(id uint) error
@@ -95,6 +96,12 @@ func (r *gormUserRepository) GetByTelegramID(telegramID int64) (*models.User, er
 	}
 
 	return &user, nil
+}
+
+func (r *gormUserRepository) UpdateChatIDByUserID(userID uint, chatID int64) error {
+	return r.db.Model(&models.User{}).Where("id = ?", userID).Updates(map[string]any{
+		"telegram_chat_id": chatID,
+	}).Error
 }
 
 func (r *gormUserRepository) Create(user *models.User) error {

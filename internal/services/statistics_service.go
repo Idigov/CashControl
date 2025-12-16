@@ -65,5 +65,20 @@ func (s *statisticsService) GetStatistics(
 	}
 
 	end := now
-	return s.repo.GetPeriodStatistics(userID, start, end)
+	stats, err := s.repo.GetPeriodStatistics(userID, start, end)
+	if err != nil {
+		return nil, err
+	}
+	
+	// Устанавливаем период в результат
+	stats.Period = period
+	
+	// Вычисляем среднее значение
+	if stats.Count > 0 {
+		stats.AverageAmount = stats.TotalAmount / float64(stats.Count)
+	} else {
+		stats.AverageAmount = 0
+	}
+	
+	return stats, nil
 }

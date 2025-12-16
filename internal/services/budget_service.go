@@ -4,6 +4,7 @@ import (
 	"cashcontrol/internal/models"
 	"cashcontrol/internal/repository"
 	"errors"
+	"fmt"
 	"log/slog"
 	"time"
 
@@ -30,13 +31,20 @@ type BudgetService interface {
 type budgetService struct {
 	budgets  repository.BudgetRepository
 	expenses repository.ExpenseRepository
+	notifier NotificationService
 	logger   *slog.Logger
 }
 
-func NewBudgetService(budgets repository.BudgetRepository, expenses repository.ExpenseRepository, logger *slog.Logger) BudgetService {
+func NewBudgetService(
+	budgets repository.BudgetRepository,
+	expenses repository.ExpenseRepository,
+	notifier NotificationService,
+	logger *slog.Logger,
+) BudgetService {
 	return &budgetService{
 		budgets:  budgets,
 		expenses: expenses,
+		notifier: notifier,
 		logger:   logger,
 	}
 }
@@ -246,6 +254,21 @@ func (s *budgetService) GetBudgetStatus(userID uint, month, year int) (*models.B
 			slog.Float64("spent", spent),
 			slog.Float64("percentage", percentage),
 		)
+	}
+
+	// Уведомления
+	if s.notifier != nil && (isExceeded || isNearLimit) {
+		go func() {
+			var msg string
+			if isExceeded {
+				msg = fmt.Sprintf("🚨 Бюджет превышен: потрачено %.0f%% (%.0f / %.0f)", percentage, spent, budget.Amount)
+			} else {
+				msg = fmt.Sprintf("⚠️ Бюджет на исходе: %.0f%% (%.0f / %.0f)", percentage, spent, budget.Amount)
+			}
+			if err := s.notifier.SendToUser(userID, msg); err != nil {
+				s.logger.Warn("send budget notification failed", slog.Uint64("user_id", uint64(userID)), slog.String("error", err.Error()))
+			}
+		}()
 	}
 
 	return status, nil

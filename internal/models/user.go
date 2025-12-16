@@ -12,6 +12,7 @@ type User struct {
 	gorm.Model
 
 	TelegramID *int64  `gorm:"uniqueIndex" json:"telegram_id,omitempty"`
+	TelegramChatID *int64 `json:"telegram_chat_id,omitempty"`
 
 	Email    *string `gorm:"uniqueIndex" json:"email,omitempty"`
 	Username *string `gorm:"uniqueIndex" json:"username,omitempty"`
