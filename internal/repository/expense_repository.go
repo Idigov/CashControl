@@ -16,6 +16,7 @@ type ExpenseRepository interface {
 	Create(expense *models.Expense) error
 	Update(expense *models.Expense) error
 	Delete(id uint) error
+	WithTx(tx TxProvider) ExpenseRepository
 }
 
 type gormExpenseRepository struct {
@@ -25,6 +26,10 @@ type gormExpenseRepository struct {
 
 func NewExpenseRepository(db *gorm.DB, logger *slog.Logger) ExpenseRepository {
 	return &gormExpenseRepository{db: db, logger: logger}
+}
+
+func (r *gormExpenseRepository) WithTx(tx TxProvider) ExpenseRepository {
+	return &gormExpenseRepository{db: tx.DB(), logger: r.logger}
 }
 
 func (r *gormExpenseRepository) List(filter models.ExpenseFilter) ([]models.Expense, error) {

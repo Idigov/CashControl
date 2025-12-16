@@ -19,6 +19,7 @@ type RecurringExpenseRepository interface {
 	Create(recurringExpense *models.RecurringExpense) error
 	Update(recurringExpense *models.RecurringExpense) error
 	Delete(id uint) error
+	WithTx(tx TxProvider) RecurringExpenseRepository
 }
 
 type gormRecurringExpenseRepository struct {
@@ -28,6 +29,10 @@ type gormRecurringExpenseRepository struct {
 
 func NewRecurringExpenseRepository(db *gorm.DB, logger *slog.Logger) RecurringExpenseRepository {
 	return &gormRecurringExpenseRepository{db: db, logger: logger}
+}
+
+func (r *gormRecurringExpenseRepository) WithTx(tx TxProvider) RecurringExpenseRepository {
+	return &gormRecurringExpenseRepository{db: tx.DB(), logger: r.logger}
 }
 
 func (r *gormRecurringExpenseRepository) List() ([]models.RecurringExpense, error) {

@@ -4,6 +4,7 @@ import (
 	"cashcontrol/internal/models"
 	"cashcontrol/internal/repository"
 	"errors"
+	"log/slog"
 	"time"
 )
 
@@ -16,10 +17,11 @@ type StatisticsService interface {
 
 type statisticsService struct {
 	repo repository.StatisticsRepository
+	logger *slog.Logger
 }
 
-func NewStatisticsService(repo repository.StatisticsRepository) StatisticsService {
-	return &statisticsService{repo: repo}
+func NewStatisticsService(repo repository.StatisticsRepository, logger *slog.Logger) StatisticsService {
+	return &statisticsService{repo: repo, logger: logger}
 }
 
 func (s *statisticsService) GetStatistics(
@@ -61,9 +63,36 @@ func (s *statisticsService) GetStatistics(
 		)
 
 	default:
+		if s.logger != nil {
+			s.logger.Warn("statistics invalid period",
+				slog.Uint64("user_id", uint64(userID)),
+				slog.String("period", string(period)),
+			)
+		}
 		return nil, errors.New("invalid statistics period")
 	}
 
 	end := now
-	return s.repo.GetPeriodStatistics(userID, start, end)
+	stats, err := s.repo.GetPeriodStatistics(userID, start, end)
+	if err != nil {
+		if s.logger != nil {
+			s.logger.Error("statistics repo failed",
+				slog.Uint64("user_id", uint64(userID)),
+				slog.String("error", err.Error()),
+			)
+		}
+		return nil, err
+	}
+	
+	// Устанавливаем период в результат
+	stats.Period = period
+	
+	// Вычисляем среднее значение
+	if stats.Count > 0 {
+		stats.AverageAmount = stats.TotalAmount / float64(stats.Count)
+	} else {
+		stats.AverageAmount = 0
+	}
+	
+	return stats, nil
 }

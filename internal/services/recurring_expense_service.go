@@ -4,6 +4,7 @@ import (
 	"cashcontrol/internal/models"
 	"cashcontrol/internal/repository"
 	"errors"
+	"fmt"
 	"log/slog"
 	"time"
 
@@ -28,17 +29,20 @@ type RecurringExpenseService interface {
 type recurringExpenseService struct {
 	recurringExpenses repository.RecurringExpenseRepository
 	expenses          repository.ExpenseRepository
+	notifier          NotificationService
 	logger            *slog.Logger
 }
 
 func NewRecurringExpenseService(
 	recurringExpenses repository.RecurringExpenseRepository,
 	expenses repository.ExpenseRepository,
+	notifier NotificationService,
 	logger *slog.Logger,
 ) RecurringExpenseService {
 	return &recurringExpenseService{
 		recurringExpenses: recurringExpenses,
 		expenses:          expenses,
+		notifier:          notifier,
 		logger:            logger,
 	}
 }
@@ -84,6 +88,22 @@ func (s *recurringExpenseService) CreateRecurringExpense(userID uint, req models
 		slog.String("type", string(req.Type)),
 		slog.Time("next_date", nextDate),
 	)
+
+	if s.notifier != nil {
+		go func() {
+			msg := fmt.Sprintf("🔁 Создан регулярный расход: %.2f ₽ (%s). Следующая дата: %s",
+				recurringExpense.Amount,
+				recurringExpense.Description,
+				recurringExpense.NextDate.Format("02.01.2006"),
+			)
+			if err := s.notifier.SendToUser(userID, msg); err != nil {
+				s.logger.Warn("send recurring create notification failed",
+					slog.Uint64("user_id", uint64(userID)),
+					slog.String("error", err.Error()),
+				)
+			}
+		}()
+	}
 
 	return recurringExpense, nil
 }
@@ -259,6 +279,22 @@ func (s *recurringExpenseService) ActivateRecurringExpense(id uint) (*models.Rec
 		slog.Uint64("recurring_expense_id", uint64(id)),
 	)
 
+	if s.notifier != nil {
+		go func() {
+			msg := fmt.Sprintf("✅ Регулярный расход включен: %.2f ₽ (%s). Следующая дата: %s",
+				recurringExpense.Amount,
+				recurringExpense.Description,
+				recurringExpense.NextDate.Format("02.01.2006"),
+			)
+			if err := s.notifier.SendToUser(recurringExpense.UserID, msg); err != nil {
+				s.logger.Warn("send recurring activate notification failed",
+					slog.Uint64("user_id", uint64(recurringExpense.UserID)),
+					slog.String("error", err.Error()),
+				)
+			}
+		}()
+	}
+
 	return recurringExpense, nil
 }
 
@@ -299,38 +335,65 @@ func (s *recurringExpenseService) ProcessRecurringExpenses() error {
 	}
 
 	for _, recurringExpense := range dueRecurringExpenses {
-		// Создаем расход
-		expense := &models.Expense{
-			UserID:      recurringExpense.UserID,
-			CategoryID:  recurringExpense.CategoryID,
-			Amount:      recurringExpense.Amount,
-			Description: recurringExpense.Description,
-			Date:        recurringExpense.NextDate,
-		}
+		err = repository.RunInTransaction(func(tx repository.TxProvider) error {
+			// Создаем расход
+			expense := &models.Expense{
+				UserID:      recurringExpense.UserID,
+				CategoryID:  recurringExpense.CategoryID,
+				Amount:      recurringExpense.Amount,
+				Description: recurringExpense.Description,
+				Date:        recurringExpense.NextDate,
+			}
 
-		if err := s.expenses.Create(expense); err != nil {
-			s.logger.Error("failed to create expense from recurring expense",
+			if err := s.expenses.WithTx(tx).Create(expense); err != nil {
+				return fmt.Errorf("create expense from recurring %d: %w", recurringExpense.ID, err)
+			}
+
+			// Обновляем следующую дату
+			recurringExpense.NextDate = s.CalculateNextDate(&recurringExpense)
+			if err := s.recurringExpenses.WithTx(tx).Update(&recurringExpense); err != nil {
+				return fmt.Errorf("update next_date for recurring %d: %w", recurringExpense.ID, err)
+			}
+
+			// Уведомление после commit
+			if s.notifier != nil {
+				msg := fmt.Sprintf("🔁 Сегодня списание: %.2f ₽ (%s)%s",
+					recurringExpense.Amount,
+					recurringExpense.Description,
+					func() string {
+						if recurringExpense.Category.Name != "" {
+							return fmt.Sprintf(" — категория %s", recurringExpense.Category.Name)
+						}
+						return ""
+					}(),
+				)
+				defer func(re models.RecurringExpense) {
+					go func() {
+						if err := s.notifier.SendToUser(re.UserID, msg); err != nil {
+							s.logger.Warn("send recurring due notification failed",
+								slog.Uint64("user_id", uint64(re.UserID)),
+								slog.String("error", err.Error()),
+							)
+						}
+					}()
+				}(recurringExpense)
+			}
+
+			s.logger.Info("processed recurring expense",
+				slog.Uint64("recurring_expense_id", uint64(recurringExpense.ID)),
+				slog.Float64("amount", recurringExpense.Amount),
+				slog.Time("next_date", recurringExpense.NextDate),
+			)
+			return nil
+		})
+
+		if err != nil {
+			s.logger.Error("process recurring expense failed",
 				slog.Uint64("recurring_expense_id", uint64(recurringExpense.ID)),
 				slog.String("error", err.Error()),
 			)
 			continue
 		}
-
-		// Обновляем следующую дату
-		recurringExpense.NextDate = s.CalculateNextDate(&recurringExpense)
-		if err := s.recurringExpenses.Update(&recurringExpense); err != nil {
-			s.logger.Error("failed to update next date for recurring expense",
-				slog.Uint64("recurring_expense_id", uint64(recurringExpense.ID)),
-				slog.String("error", err.Error()),
-			)
-			continue
-		}
-
-		s.logger.Info("processed recurring expense",
-			slog.Uint64("recurring_expense_id", uint64(recurringExpense.ID)),
-			slog.Uint64("expense_id", uint64(expense.ID)),
-			slog.Time("next_date", recurringExpense.NextDate),
-		)
 	}
 
 	return nil

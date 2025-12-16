@@ -18,7 +18,6 @@ var DB *gorm.DB
 
 // createDatabaseIfNotExists создает базу данных, если её не существует
 func createDatabaseIfNotExists(cfg *config.Config) error {
-	// Подключаемся к базе данных postgres
 	dsn := fmt.Sprintf(
 		"host=%s user=%s password=%s dbname=postgres port=%s sslmode=%s",
 		cfg.DBHost,
@@ -44,10 +43,7 @@ func createDatabaseIfNotExists(cfg *config.Config) error {
 		return fmt.Errorf("ошибка проверки существования БД: %w", err)
 	}
 
-	// Создаем базу данных, если её нет
-	// Валидация имени БД для безопасности (только буквы, цифры, подчеркивания)
 	if !exists {
-		// Экранируем имя БД для безопасности (PostgreSQL требует двойные кавычки для идентификаторов)
 		quotedDBName := fmt.Sprintf(`"%s"`, strings.ReplaceAll(cfg.DBName, `"`, `""`))
 		_, err = db.Exec(fmt.Sprintf("CREATE DATABASE %s", quotedDBName))
 		if err != nil {
@@ -58,11 +54,7 @@ func createDatabaseIfNotExists(cfg *config.Config) error {
 	return nil
 }
 
-// Init инициализирует подключение к базе данных
 func Init(cfg *config.Config) error {
-	// Создаем базу данных, если её нет (только для локальной разработки)
-	// Для облачных сервисов (Supabase, etc.) БД уже существует, создание не требуется
-	// Пропускаем создание БД если используется DATABASE_URL или хост не localhost
 	if !cfg.UseDatabaseURL && (cfg.DBHost == "localhost" || cfg.DBHost == "127.0.0.1") {
 		if err := createDatabaseIfNotExists(cfg); err != nil {
 			return fmt.Errorf("ошибка создания БД: %w", err)
@@ -72,10 +64,8 @@ func Init(cfg *config.Config) error {
 
 	var dsn string
 	if cfg.UseDatabaseURL {
-		// Используем DATABASE_URL (для облачных сервисов: Supabase, etc.)
 		dsn = cfg.DatabaseURL
 	} else {
-		// Формируем DSN из отдельных параметров (для локальной разработки)
 		dsn = fmt.Sprintf(
 			"host=%s user=%s password=%s dbname=%s port=%s sslmode=%s",
 			cfg.DBHost,
@@ -94,14 +84,12 @@ func Init(cfg *config.Config) error {
 		return fmt.Errorf("ошибка подключения к БД: %w", err)
 	}
 
-	// Проверка подключения
 	sqlDB, err := DB.DB()
 	if err != nil {
 		return fmt.Errorf("ошибка получения sql.DB: %w", err)
 	}
 
 	if err := sqlDB.Ping(); err != nil {
-		// Проверяем, является ли ошибка проблемой с IPv6 (для прямых подключений)
 		errStr := strings.ToLower(err.Error())
 		if strings.Contains(errStr, "no route to host") || strings.Contains(errStr, "ipv6") || strings.Contains(errStr, "network is unreachable") {
 			return fmt.Errorf("ошибка подключения к БД (IPv6 недоступен): %w", err)
@@ -112,7 +100,6 @@ func Init(cfg *config.Config) error {
 	return nil
 }
 
-// Migrate выполняет миграции базы данных
 func Migrate() error {
 	if DB == nil {
 		return fmt.Errorf("база данных не инициализирована")
@@ -133,7 +120,6 @@ func Migrate() error {
 	return nil
 }
 
-// Close закрывает подключение к базе данных
 func Close() error {
 	if DB == nil {
 		return nil

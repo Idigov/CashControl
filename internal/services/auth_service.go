@@ -166,12 +166,19 @@ func (s *authService) LoginWithTelegram(initData string) (*models.LoginResponse,
 	if user == nil {
 		user = &models.User{
 			TelegramID: &telegramID,
+			TelegramChatID: &telegramID,
 		}
 		if err := s.users.Create(user); err != nil {
 			return nil, err
 		}
 
 		s.createDefaultCategories(user.ID)
+	} else {
+		// Проставляем chat_id, если его ещё нет
+		if user.TelegramChatID == nil {
+			user.TelegramChatID = &telegramID
+			_ = s.users.Update(user)
+		}
 	}
 
 	token, err := s.generateToken(user.ID)
